@@ -1,2 +1,0 @@
-# montecarlo
-gpu c++ cuda

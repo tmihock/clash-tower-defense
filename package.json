@@ -1,0 +1,40 @@
+{
+	"name": "game",
+	"version": "1.0.0",
+	"description": "",
+	"main": "index.js",
+	"scripts": {
+		"build": "rbxtsc && echo .ts files compiled. && py scripts\\fixLighting.py && lune scripts\\save.luau && echo Models saved to folder. && rojo build -o build.rbxlx default.project.json",
+		"watch": "rbxtsc -w"
+	},
+	"keywords": [],
+	"author": "",
+	"license": "ISC",
+	"devDependencies": {
+		"@rbxts/compiler-types": "^3.0.0-types.0",
+		"@rbxts/types": "^1.0.853",
+		"rbxts-transformer-flamework": "^1.3.1",
+		"typescript": "^5.5.3"
+	},
+	"dependencies": {
+		"@flamework/components": "^1.3.1",
+		"@flamework/core": "^1.3.1",
+		"@flamework/networking": "^1.3.1",
+		"@rbxts/charm": "^0.10.0",
+		"@rbxts/maid": "^1.1.0",
+		"@rbxts/pretty-react-hooks": "^0.6.4",
+		"@rbxts/react": "^17.2.3",
+		"@rbxts/react-roblox": "^17.2.3",
+		"@rbxts/react-spring": "^1.0.0",
+		"@rbxts/ripple": "^0.9.3",
+		"@rbxts/shared-components-flamework": "^2.5.2",
+		"@rbxts/spring": "^1.0.2",
+		"@rbxts/topbar-plus": "^3.0.2-ts.3",
+		"io-serve": "^1.1.2",
+		"prettier": "^3.0.3",
+		"rbxts-transform-debug": "github:roblox-aurora/rbxts-transform-debug",
+		"rbxts-transform-env": "^2.2.0",
+		"rbxts-transformer-t-new": "^1.1.5",
+		"roblox-ts": "^3.0.0"
+	}
+}

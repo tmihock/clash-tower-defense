@@ -1,0 +1,79 @@
+{
+	"name": "roblox-ts-game",
+	"globIgnorePaths": ["**/package.json", "**/tsconfig.json"],
+	"tree": {
+		"$className": "DataModel",
+		"ServerScriptService": {
+			"$className": "ServerScriptService",
+			"TS": {
+				"$path": "out/server"
+			}
+		},
+		"ReplicatedStorage": {
+			"$path": "models/ReplicatedStorage.rbxm",
+			"rbxts_include": {
+				"$path": "include",
+				"node_modules": {
+					"$className": "Folder",
+					"@rbxts": {
+						"$path": "node_modules/@rbxts"
+					},
+					"@flamework": {
+						"$path": "node_modules/@flamework"
+					}
+				}
+			},
+			"TS": {
+				"$path": "out/shared"
+			}
+		},
+		"StarterPlayer": {
+			"$path": "models/StarterPlayer.rbxm",
+			"StarterPlayerScripts": {
+				"$className": "StarterPlayerScripts",
+				"TS": {
+					"$path": "out/client"
+				}
+			}
+		},
+		"Lighting": {
+			"$path": "models/Lighting.rbxm"
+		},
+		"MaterialService": {
+			"$path": "models/MaterialService.rbxm"
+		},
+		"Teams": {
+			"$path": "models/Teams.rbxm"
+		},
+		"StarterGui": {
+			"$path": "models/StarterGui.rbxm"
+		},
+		"ReplicatedFirst": {
+			"$path": "models/ReplicatedFirst.rbxm"
+		},
+		"Workspace": {
+			"$path": "models/Workspace.rbxm"
+		},
+		"ServerStorage": {
+			"$path": "models/ServerStorage.rbxm"
+		},
+		"HttpService": {
+			"$className": "HttpService",
+			"$properties": {
+				"HttpEnabled": true
+			}
+		},
+		"SoundService": {
+			"$className": "SoundService",
+			"$properties": {
+				"RespectFilteringEnabled": true
+			}
+		},
+		"TextChatService": {
+			"$className": "TextChatService",
+			"$properties": {
+				"ChatVersion": "TextChatService"
+			}
+		}
+	}
+}
