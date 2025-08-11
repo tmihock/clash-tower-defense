@@ -13,4 +13,15 @@ export interface ItemInfo {
 	onM2PostSuccess?(tool: Tool): void
 }
 
-export const ItemData = {} as Record<ItemName, ItemInfo>
+export const ItemData = {
+	Pencil: {
+		onM1(tool) {
+			$print("Pencil attack started")
+			// Play attack animation or sound effect here
+		},
+		onM1PostSuccess(tool) {
+			$print("Pencil attack completed successfully")
+			// Add visual feedback like screen shake or hit effect
+		}
+	}
+} as Record<ItemName, ItemInfo>

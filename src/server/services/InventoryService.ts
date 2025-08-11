@@ -4,7 +4,7 @@ import { $terrify } from "rbxts-transformer-t-new"
 import { AvatarEditorService, CollectionService, ReplicatedStorage } from "@rbxts/services"
 import { OnPlayerAdded } from "./PlayerService"
 import { $assert } from "rbxts-transform-debug"
-import { KEEP_INVENTORY_ON_DEATH } from "shared/constants"
+import { KEEP_INVENTORY_BETWEEN_SESSIONS, KEEP_INVENTORY_ON_DEATH } from "shared/constants"
 import { ItemName } from "shared/enum"
 
 const SAVE_KEY = "inventory"
@@ -224,6 +224,11 @@ export class InventoryService implements DataIO {
 		this.setupBackpackStorage(player)
 		this.keepInventory(player)
 
+		if (!KEEP_INVENTORY_BETWEEN_SESSIONS) {
+			this.loadedPlayers.add(player)
+			return
+		}
+
 		let inv
 		if (tHasInv(data)) {
 			inv = data[SAVE_KEY] as ItemInfo[]
@@ -235,16 +240,23 @@ export class InventoryService implements DataIO {
 		this.loadedPlayers.add(player)
 	}
 
-	onDataSave(player: Player): SaveableDataObject {
+	onDataSave(player: Player): SaveableDataObject<ItemInfo[]> {
 		const inventory = this.serializeInventory(player)
 		this.playerBackpacks.delete(player)
 		this.backpackSaves.delete(player)
 		this.playerHeldTools.delete(player)
 		this.loadedPlayers.delete(player)
 
-		return {
-			key: SAVE_KEY,
-			value: inventory
+		if (!KEEP_INVENTORY_BETWEEN_SESSIONS) {
+			return {
+				key: SAVE_KEY,
+				value: []
+			}
+		} else {
+			return {
+				key: SAVE_KEY,
+				value: inventory
+			}
 		}
 	}
 
