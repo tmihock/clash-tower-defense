@@ -1,13 +1,12 @@
 import { Controller, OnStart } from "@flamework/core"
 import Maid from "@rbxts/maid"
 import { UserInputService, Players } from "@rbxts/services"
+import { SPRINT_KEY } from "shared/constants"
 
 export const MovementConfig = {
 	DefaultWalkSpeed: 16,
 	SprintSpeed: 24
 }
-
-const SPRINT_KEY = Enum.KeyCode.LeftControl
 
 const Player = Players.LocalPlayer
 

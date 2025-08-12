@@ -1,8 +1,11 @@
-export const MONEY_LEADERSTAT_NAME = "Ice Shards"
+import { ItemName } from "./enum"
 
-export const MAX_VITAL = 100
-
-export const RESPAWN_TIME = 5
+export const MONEY_LEADERSTAT_NAME = "Gold"
 
 export const KEEP_INVENTORY_BETWEEN_SESSIONS = false
 export const KEEP_INVENTORY_ON_DEATH = false
+
+export const SPRINT_KEY = Enum.KeyCode.LeftShift
+
+export const STARTER_ITEMS_OUTLAW: ItemName[] = ["Revolver"]
+export const STARTER_ITEMS_MARSHALL: ItemName[] = ["Lasso", "Handcuffs", "Revolver"]

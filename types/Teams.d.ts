@@ -1,5 +1,5 @@
 type RobloxTeams = Teams & {
-	Intermission: Team
-	Blue: Team
-	Red: Team
+	Choosing: Team
+	Outlaw: Team
+	Marshall: Team
 }

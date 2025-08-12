@@ -4,7 +4,6 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"build": "rbxtsc && echo .ts files compiled. && py scripts\\fixLighting.py && lune scripts\\save.luau && echo Models saved to folder. && rojo build -o build.rbxlx default.project.json",
 		"watch": "rbxtsc -w"
 	},
 	"keywords": [],

@@ -3,7 +3,7 @@ import { DataIO, SaveableDataObject } from "./DataService"
 import { $terrify } from "rbxts-transformer-t-new"
 import { AvatarEditorService, CollectionService, ReplicatedStorage } from "@rbxts/services"
 import { OnPlayerAdded } from "./PlayerService"
-import { $assert } from "rbxts-transform-debug"
+import { $assert, $print } from "rbxts-transform-debug"
 import { KEEP_INVENTORY_BETWEEN_SESSIONS, KEEP_INVENTORY_ON_DEATH } from "shared/constants"
 import { ItemName } from "shared/enum"
 
@@ -26,6 +26,16 @@ export class InventoryService implements DataIO {
 	private backpackSaves = new Map<Player, Folder>() // Folder while character is not loaded
 	private playerHeldTools = new Map<Player, Tool | undefined>() // last held tool, only overridden, use getHeld to get the current held tool
 
+	public giveItems(player: Player, names: ItemName[]) {
+		names.forEach(itemName => {
+			this.giveItem(player, itemName)
+		})
+	}
+
+	public clearInventory(player: Player) {
+		this.getOwnedItems(player).forEach(t => this.removeItem(player, t))
+	}
+
 	// make store
 	public giveItem(player: Player, name: ItemName): void
 	public giveItem(player: Player, item: ItemInfo): void
@@ -41,7 +51,7 @@ export class InventoryService implements DataIO {
 
 		const toolTemplate = itemFolder.FindFirstChild(name)
 		if (!toolTemplate || !toolTemplate.IsA("Tool")) {
-			error(`Item ${name} not found in ReplicatedStorage`)
+			error(`Item "${name}" not found in ReplicatedStorage`)
 		}
 
 		const clone = toolTemplate.Clone()
@@ -65,7 +75,7 @@ export class InventoryService implements DataIO {
 		if (this.playerOwnsItem(player, item)) {
 			item.Destroy()
 		} else {
-			print(item.GetFullName())
+			$print(item.GetFullName())
 		}
 	}
 
@@ -250,7 +260,7 @@ export class InventoryService implements DataIO {
 		if (!KEEP_INVENTORY_BETWEEN_SESSIONS) {
 			return {
 				key: SAVE_KEY,
-				value: []
+				value: undefined as unknown as ItemInfo[]
 			}
 		} else {
 			return {

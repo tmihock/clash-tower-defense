@@ -1,13 +1,14 @@
 import { Networking } from "@flamework/networking"
-import { Vitals } from "./types"
+import { ChoosableRole, Role } from "./types"
 
 // Client -> Server events
-interface ServerEvents {}
+interface ServerEvents {
+	chooseRole(role: ChoosableRole): void
+	startChoosing(): void
+}
 
 // Server -> Client events
-interface ClientEvents {
-	updateVital(vital: keyof Vitals, value: number): void
-}
+interface ClientEvents {}
 
 // Client -> Server -> Client functions
 interface ServerFunctions {

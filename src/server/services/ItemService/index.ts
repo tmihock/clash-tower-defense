@@ -32,10 +32,10 @@ export class ItemService implements OnStart {
 					let success = false
 					switch (input) {
 						case Enum.UserInputType.MouseButton1:
-							success = ItemData[name].onM1?.(player, tool) as unknown as boolean
+							success = ItemData[name]?.onM1?.(player, tool)
 							break
 						case Enum.UserInputType.MouseButton2:
-							success = ItemData[name].onM2?.(player, tool) as unknown as boolean
+							success = ItemData[name].onM2?.(player, tool)
 							break
 					}
 					if (success) resolve()

@@ -4,7 +4,7 @@ import { $assert } from "rbxts-transform-debug"
 import { $terrify } from "rbxts-transformer-t-new"
 import { ItemName } from "shared/enum"
 import { ItemData } from "./CItemInfo"
-import { Events, Functions } from "client/networking"
+import { Functions } from "client/networking"
 
 const Player = Players.LocalPlayer
 const validUseButtons = new Set<Enum.UserInputType>([
@@ -13,15 +13,11 @@ const validUseButtons = new Set<Enum.UserInputType>([
 ])
 const tToolName = $terrify<ItemName>()
 
-const buttonToFunc = {
-	[Enum.UserInputType.MouseButton1.Name]: "onM1",
-	[Enum.UserInputType.MouseButton2.Name]: "onM2"
-} as const
-
 @Controller({})
 export class ItemController implements OnStart {
 	onStart() {
 		this.handleToolUse()
+		this.trackToolEquip()
 	}
 
 	private handleToolUse() {
@@ -30,8 +26,8 @@ export class ItemController implements OnStart {
 
 			if (validUseButtons.has(input.UserInputType) && this.isHoldingTool()) {
 				const tool = this.getHeldTool()!
-				const itemName = tool.Name
-				$assert(tToolName(itemName), `bad tool name [${itemName}]`)
+				const itemName = tool.Name as ItemName
+				$assert(tToolName(itemName), `Bad tool name "${itemName}"`)
 
 				const serverInvoke = Functions.useTool.invoke(tool, input.UserInputType).then().catch(warn)
 
@@ -45,11 +41,41 @@ export class ItemController implements OnStart {
 						break
 					case Enum.UserInputType.MouseButton2:
 						itemInfo.onM2?.(tool)
-						serverInvoke.then(_ => itemInfo.onM1PostSuccess?.(tool)).catch(warn)
+						serverInvoke.then(_ => itemInfo.onM2PostSuccess?.(tool)).catch(warn)
 						break
 				}
 			}
 		})
+	}
+
+	private trackToolEquip() {
+		const character = Player.Character || Player.CharacterAdded.Wait()[0]
+
+		// When a tool is added to the character, treat that as equip
+		character.ChildAdded.Connect(child => {
+			if (child.IsA("Tool")) {
+				const itemName = child.Name
+				$assert(tToolName(itemName), `Bad tool name "${itemName}"`)
+				ItemData[itemName]?.onEquip?.(child)
+			}
+		})
+
+		// When a tool is removed from the character, treat that as unequip
+		character.ChildRemoved.Connect(child => {
+			if (child.IsA("Tool")) {
+				const itemName = child.Name
+				$assert(tToolName(itemName), `Bad tool name "${itemName}"`)
+				ItemData[itemName]?.onUnequip?.(child)
+			}
+		})
+
+		// If holding a tool at startup
+		const heldTool = this.getHeldTool()
+		if (heldTool) {
+			const itemName = heldTool.Name
+			$assert(tToolName(itemName), `Bad tool name "${itemName}"`)
+			ItemData[itemName]?.onEquip?.(heldTool)
+		}
 	}
 
 	private isHoldingTool(): boolean {
