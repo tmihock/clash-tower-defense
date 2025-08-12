@@ -10,7 +10,7 @@
 			}
 		},
 		"ReplicatedStorage": {
-			"$path": "models/ReplicatedStorage.rbxm",
+			"$path": "models/ReplicatedStorage.rbxmx",
 			"rbxts_include": {
 				"$path": "include",
 				"node_modules": {
@@ -28,7 +28,7 @@
 			}
 		},
 		"StarterPlayer": {
-			"$path": "models/StarterPlayer.rbxm",
+			"$path": "models/StarterPlayer.rbxmx",
 			"StarterPlayerScripts": {
 				"$className": "StarterPlayerScripts",
 				"TS": {
@@ -37,25 +37,25 @@
 			}
 		},
 		"Lighting": {
-			"$path": "models/Lighting.rbxm"
+			"$path": "models/Lighting.rbxmx"
 		},
 		"MaterialService": {
-			"$path": "models/MaterialService.rbxm"
+			"$path": "models/MaterialService.rbxmx"
 		},
 		"Teams": {
-			"$path": "models/Teams.rbxm"
+			"$path": "models/Teams.rbxx"
 		},
 		"StarterGui": {
-			"$path": "models/StarterGui.rbxm"
+			"$path": "models/StarterGui.rbxmx"
 		},
 		"ReplicatedFirst": {
-			"$path": "models/ReplicatedFirst.rbxm"
+			"$path": "models/ReplicatedFirst.rbxmx"
 		},
 		"Workspace": {
-			"$path": "models/Workspace.rbxm"
+			"$path": "models/Workspace.rbxmx"
 		},
 		"ServerStorage": {
-			"$path": "models/ServerStorage.rbxm"
+			"$path": "models/ServerStorage.rbxmx"
 		},
 		"HttpService": {
 			"$className": "HttpService",

@@ -1,0 +1,1618 @@
+<roblox version="4">
+  <Item class="StarterPlayer" referent="0">
+    <Properties>
+      <string name="Name">StarterPlayer</string>
+      <bool name="AllowCustomAnimations">true</bool>
+      <BinaryString name="AttributesSerialize"></BinaryString>
+      <bool name="AutoJumpEnabled">true</bool>
+      <token name="AvatarJointUpgrade_SerializedRollout">0</token>
+      <float name="CameraMaxZoomDistance">128</float>
+      <float name="CameraMinZoomDistance">0.5</float>
+      <token name="CameraMode">0</token>
+      <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+      <float name="CharacterJumpHeight">7.2</float>
+      <float name="CharacterJumpPower">50</float>
+      <float name="CharacterMaxSlopeAngle">89</float>
+      <bool name="CharacterUseJumpPower">false</bool>
+      <float name="CharacterWalkSpeed">16</float>
+      <bool name="ClassicDeath">true</bool>
+      <token name="DevCameraOcclusionMode">0</token>
+      <token name="DevComputerCameraMovementMode">0</token>
+      <token name="DevComputerMovementMode">0</token>
+      <token name="DevTouchCameraMovementMode">0</token>
+      <token name="DevTouchMovementMode">0</token>
+      <token name="EnableDynamicHeads">0</token>
+      <bool name="EnableMouseLockOption">false</bool>
+      <int64 name="GameSettingsAssetIDFace">0</int64>
+      <int64 name="GameSettingsAssetIDHead">0</int64>
+      <int64 name="GameSettingsAssetIDLeftArm">0</int64>
+      <int64 name="GameSettingsAssetIDLeftLeg">0</int64>
+      <int64 name="GameSettingsAssetIDPants">0</int64>
+      <int64 name="GameSettingsAssetIDRightArm">0</int64>
+      <int64 name="GameSettingsAssetIDRightLeg">0</int64>
+      <int64 name="GameSettingsAssetIDShirt">0</int64>
+      <int64 name="GameSettingsAssetIDTeeShirt">0</int64>
+      <int64 name="GameSettingsAssetIDTorso">0</int64>
+      <token name="GameSettingsAvatar">1</token>
+      <token name="GameSettingsR15Collision">0</token>
+      <NumberRange name="GameSettingsScaleRangeBodyType">0 1 </NumberRange>
+      <NumberRange name="GameSettingsScaleRangeHead">0.95 1 </NumberRange>
+      <NumberRange name="GameSettingsScaleRangeHeight">0.9 1.05 </NumberRange>
+      <NumberRange name="GameSettingsScaleRangeProportion">0 1 </NumberRange>
+      <NumberRange name="GameSettingsScaleRangeWidth">0.7 1 </NumberRange>
+      <float name="HealthDisplayDistance">100</float>
+      <bool name="LoadCharacterAppearance">true</bool>
+      <token name="LoadCharacterLayeredClothing">0</token>
+      <token name="LuaCharacterController">0</token>
+      <float name="NameDisplayDistance">100</float>
+      <bool name="RagdollDeath">true</bool>
+      <bool name="DefinesCapabilities">false</bool>
+      <int64 name="SourceAssetId">-1</int64>
+      <BinaryString name="Tags"></BinaryString>
+      <bool name="UserEmotesEnabled">true</bool>
+    </Properties>
+    <Item class="StarterPlayerScripts" referent="1">
+      <Properties>
+        <string name="Name">StarterPlayerScripts</string>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <int64 name="SourceAssetId">-1</int64>
+        <BinaryString name="Tags"></BinaryString>
+      </Properties>
+      <Item class="Folder" referent="2">
+        <Properties>
+          <string name="Name">TS</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <int64 name="SourceAssetId">-1</int64>
+          <BinaryString name="Tags"></BinaryString>
+        </Properties>
+        <Item class="Folder" referent="3">
+          <Properties>
+            <string name="Name">components</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="DefinesCapabilities">false</bool>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+          <Item class="ModuleScript" referent="4">
+            <Properties>
+              <string name="Name">gitkeep</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+return nil
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+        </Item>
+        <Item class="Folder" referent="5">
+          <Properties>
+            <string name="Name">controllers</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="DefinesCapabilities">false</bool>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+          <Item class="ModuleScript" referent="6">
+            <Properties>
+              <string name="Name">ItemController</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local Players = _services.Players
+local UserInputService = _services.UserInputService
+local t = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "t", "lib", "ts").t
+local ItemData = TS.import(script, script, "CItemInfo").ItemData
+local Functions = TS.import(script, script.Parent.Parent, "networking").Functions
+local Player = Players.LocalPlayer
+local validUseButtons = {
+	[Enum.UserInputType.MouseButton1] = true,
+	[Enum.UserInputType.MouseButton2] = true,
+}
+local tToolName = t.literal("Lasso", "Handcuffs", "Revolver", "Rifle", "Lockpick", "Dynamite")
+local ItemController
+do
+	ItemController = setmetatable({}, {
+		__tostring = function()
+			return "ItemController"
+		end,
+	})
+	ItemController.__index = ItemController
+	function ItemController.new(...)
+		local self = setmetatable({}, ItemController)
+		return self:constructor(...) or self
+	end
+	function ItemController:constructor()
+	end
+	function ItemController:onStart()
+		self:handleToolUse()
+		self:trackToolEquip()
+	end
+	function ItemController:handleToolUse()
+		UserInputService.InputBegan:Connect(function(input, gpe)
+			if gpe then
+				return nil
+			end
+			local _userInputType = input.UserInputType
+			local _condition = validUseButtons[_userInputType] ~= nil
+			if _condition then
+				_condition = self:isHoldingTool()
+			end
+			if _condition then
+				local tool = self:getHeldTool()
+				local itemName = tool.Name
+				local _arg0 = tToolName(itemName)
+				local _arg1 = `{"[src/client/controllers/ItemController/index.ts:30]"} {"tToolName(itemName)"}: {`Bad tool name "{itemName}"`}`
+				assert(_arg0, _arg1)
+				local serverInvoke = Functions.useTool:invoke(tool, input.UserInputType)
+				local itemInfo = ItemData[itemName]
+				if itemInfo == nil then
+					return nil
+				end
+				local _exp = input.UserInputType
+				repeat
+					if _exp == (Enum.UserInputType.MouseButton1) then
+						local _result = itemInfo.onM1
+						if _result ~= nil then
+							_result(tool)
+						end
+						serverInvoke:andThen(function(_)
+							local _result_1 = itemInfo.onM1PostSuccess
+							if _result_1 ~= nil then
+								_result_1 = _result_1(tool)
+							end
+							return _result_1
+						end):catch(warn)
+						break
+					end
+					if _exp == (Enum.UserInputType.MouseButton2) then
+						local _result = itemInfo.onM2
+						if _result ~= nil then
+							_result(tool)
+						end
+						serverInvoke:andThen(function(_)
+							local _result_1 = itemInfo.onM2PostSuccess
+							if _result_1 ~= nil then
+								_result_1 = _result_1(tool)
+							end
+							return _result_1
+						end):catch(warn)
+						break
+					end
+				until true
+			end
+		end)
+	end
+	function ItemController:trackToolEquip()
+		local character = Player.Character or (Player.CharacterAdded:Wait())
+		-- When a tool is added to the character, treat that as equip
+		character.ChildAdded:Connect(function(child)
+			if child:IsA("Tool") then
+				local itemName = child.Name
+				local _arg0 = tToolName(itemName)
+				local _arg1 = `{"[src/client/controllers/ItemController/index.ts:58]"} {"tToolName(itemName)"}: {`Bad tool name "{itemName}"`}`
+				assert(_arg0, _arg1)
+				local _result = ItemData[itemName]
+				if _result ~= nil then
+					_result = _result.onEquip
+					if _result ~= nil then
+						_result(child)
+					end
+				end
+			end
+		end)
+		-- When a tool is removed from the character, treat that as unequip
+		character.ChildRemoved:Connect(function(child)
+			if child:IsA("Tool") then
+				local itemName = child.Name
+				local _arg0 = tToolName(itemName)
+				local _arg1 = `{"[src/client/controllers/ItemController/index.ts:67]"} {"tToolName(itemName)"}: {`Bad tool name "{itemName}"`}`
+				assert(_arg0, _arg1)
+				local _result = ItemData[itemName]
+				if _result ~= nil then
+					_result = _result.onUnequip
+					if _result ~= nil then
+						_result(child)
+					end
+				end
+			end
+		end)
+		-- If holding a tool at startup
+		local heldTool = self:getHeldTool()
+		if heldTool then
+			local itemName = heldTool.Name
+			local _arg0 = tToolName(itemName)
+			local _arg1 = `{"[src/client/controllers/ItemController/index.ts:76]"} {"tToolName(itemName)"}: {`Bad tool name "{itemName}"`}`
+			assert(_arg0, _arg1)
+			local _result = ItemData[itemName]
+			if _result ~= nil then
+				_result = _result.onEquip
+				if _result ~= nil then
+					_result(heldTool)
+				end
+			end
+		end
+	end
+	function ItemController:isHoldingTool()
+		return self:getHeldTool() ~= nil
+	end
+	function ItemController:getHeldTool()
+		local _result = Player.Character
+		if _result ~= nil then
+			_result = _result:FindFirstChildOfClass("Tool")
+		end
+		return _result
+	end
+	do
+		-- (Flamework) ItemController metadata
+		Reflect.defineMetadata(ItemController, "identifier", "client/controllers/ItemController/init@ItemController")
+		Reflect.defineMetadata(ItemController, "flamework:implements", { "$:flamework@OnStart" })
+	end
+end
+-- (Flamework) ItemController decorators
+Reflect.decorate(ItemController, "$:flamework@Controller", Controller, { {} })
+return {
+	ItemController = ItemController,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+            <Item class="ModuleScript" referent="7">
+              <Properties>
+                <string name="Name">CItemInfo</string>
+                <BinaryString name="AttributesSerialize"></BinaryString>
+                <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+                <ContentId name="LinkedSource">
+                  <null>
+                  </null>
+                </ContentId>
+                <bool name="DefinesCapabilities">false</bool>
+                <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Flamework = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Flamework
+local Players = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services").Players
+local Player = Players.LocalPlayer
+local mouse = Player:GetMouse()
+local function Gun(base)
+	local oldOnEquip = base.onEquip
+	base.onEquip = function(tool)
+		local cameraController = Flamework.resolveDependency("client/controllers/CameraController@CameraController")
+		cameraController:setMode("ShiftLock")
+		local _result = oldOnEquip
+		if _result ~= nil then
+			_result(tool)
+		end
+	end
+	local oldOnUnequip = base.onUnequip
+	base.onUnequip = function(tool)
+		local cameraController = Flamework.resolveDependency("client/controllers/CameraController@CameraController")
+		cameraController:setMode("Default")
+		local _result = oldOnUnequip
+		if _result ~= nil then
+			_result(tool)
+		end
+	end
+	return base
+end
+local ItemData = {
+	Revolver = Gun({}),
+}
+return {
+	ItemData = ItemData,
+}
+]]></string>
+                <int64 name="SourceAssetId">-1</int64>
+                <BinaryString name="Tags"></BinaryString>
+              </Properties>
+            </Item>
+          </Item>
+          <Item class="ModuleScript" referent="8">
+            <Properties>
+              <string name="Name">MovementController</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local Maid = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "maid", "Maid")
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local UserInputService = _services.UserInputService
+local Players = _services.Players
+local SPRINT_KEY = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "constants").SPRINT_KEY
+local MovementConfig = {
+	DefaultWalkSpeed = 16,
+	SprintSpeed = 24,
+}
+local Player = Players.LocalPlayer
+local MovementController
+do
+	MovementController = setmetatable({}, {
+		__tostring = function()
+			return "MovementController"
+		end,
+	})
+	MovementController.__index = MovementController
+	function MovementController.new(...)
+		local self = setmetatable({}, MovementController)
+		return self:constructor(...) or self
+	end
+	function MovementController:constructor()
+		self.isSprinting = false
+		self.maid = Maid.new()
+	end
+	function MovementController:onStart()
+		Player.CharacterAdded:Connect(function(char)
+			return self:bindToCharacter(char)
+		end)
+		Player.CharacterRemoving:Connect(function(char)
+			return self.maid:DoCleaning()
+		end)
+		-- If character already exists (e.g., on client restart)
+		if Player.Character then
+			self:bindToCharacter(Player.Character)
+		end
+	end
+	function MovementController:bindToCharacter(character)
+		local humanoid = character:WaitForChild("Humanoid")
+		-- Listen for input
+		self.maid:GiveTask(UserInputService.InputBegan:Connect(function(input, gpe)
+			if gpe then
+				return nil
+			end
+			if input.KeyCode == SPRINT_KEY then
+				self:toggleSprint(true, humanoid)
+			end
+		end))
+		self.maid:GiveTask(UserInputService.InputEnded:Connect(function(input, gpe)
+			if input.KeyCode == SPRINT_KEY then
+				self:toggleSprint(false, humanoid)
+			end
+		end))
+	end
+	function MovementController:toggleSprint(status, humanoid)
+		if self.isSprinting == status then
+			return nil
+		end
+		self.isSprinting = status
+		humanoid.WalkSpeed = if status then MovementConfig.SprintSpeed else MovementConfig.DefaultWalkSpeed
+	end
+	do
+		-- (Flamework) MovementController metadata
+		Reflect.defineMetadata(MovementController, "identifier", "client/controllers/MovementController@MovementController")
+		Reflect.defineMetadata(MovementController, "flamework:implements", { "$:flamework@OnStart" })
+	end
+end
+-- (Flamework) MovementController decorators
+Reflect.decorate(MovementController, "$:flamework@Controller", Controller, {})
+return {
+	MovementConfig = MovementConfig,
+	MovementController = MovementController,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="9">
+            <Properties>
+              <string name="Name">RoleController</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
+local Players = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services").Players
+local _react_roblox = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-roblox")
+local createPortal = _react_roblox.createPortal
+local createRoot = _react_roblox.createRoot
+local Events = TS.import(script, script.Parent.Parent, "networking").Events
+local RoleSelection = TS.import(script, script.Parent.Parent, "ui", "RoleSelection").RoleSelection
+local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
+local RoleController
+do
+	RoleController = setmetatable({}, {
+		__tostring = function()
+			return "RoleController"
+		end,
+	})
+	RoleController.__index = RoleController
+	function RoleController.new(...)
+		local self = setmetatable({}, RoleController)
+		return self:constructor(...) or self
+	end
+	function RoleController:constructor()
+	end
+	function RoleController:onStart()
+		self:showRoleSelection()
+	end
+	function RoleController:showRoleSelection()
+		Events.startChoosing:fire()
+		-- Mount the UI
+		self.root = createRoot(Instance.new("Folder"))
+		self.root:render(createPortal(React.createElement(RoleSelection, {
+			onChoose = function(r)
+				return self:chooseRole(r)
+			end,
+		}), PlayerGui))
+	end
+	function RoleController:chooseRole(role)
+		Events.chooseRole:fire(role)
+		local _result = self.root
+		if _result ~= nil then
+			_result:unmount()
+		end
+		self.root = nil
+	end
+	do
+		-- (Flamework) RoleController metadata
+		Reflect.defineMetadata(RoleController, "identifier", "client/controllers/RoleController@RoleController")
+		Reflect.defineMetadata(RoleController, "flamework:implements", { "$:flamework@OnStart" })
+	end
+end
+-- (Flamework) RoleController decorators
+Reflect.decorate(RoleController, "$:flamework@Controller", Controller, { {} })
+return {
+	RoleController = RoleController,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="10">
+            <Properties>
+              <string name="Name">CameraController</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+--[[
+	*
+	 * 0.1.1
+	 *
+	 * TODO:
+	 *   -  Smooth transition for Shiftlock -> Default
+	 
+]]
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local Players = _services.Players
+local RunService = _services.RunService
+local UserInputService = _services.UserInputService
+local Workspace = _services.Workspace
+local Player = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local verticalAngleMin = math.rad(-55)
+local verticalAngleMax = math.rad(65)
+local cameraSettings = {
+	Default = {
+		fieldOfView = 70,
+		offset = Vector3.new(0, 0, 0),
+		sensitivity = 0,
+		lerpSpeed = 0.25,
+	},
+	ShiftLock = {
+		fieldOfView = 70,
+		offset = Vector3.new(3, 2.5, 9),
+		sensitivity = 3,
+		lerpSpeed = 0.25,
+	},
+}
+local CameraController
+do
+	CameraController = setmetatable({}, {
+		__tostring = function()
+			return "CameraController"
+		end,
+	})
+	CameraController.__index = CameraController
+	function CameraController.new(...)
+		local self = setmetatable({}, CameraController)
+		return self:constructor(...) or self
+	end
+	function CameraController:constructor()
+		self.horizontalAngle = 0
+		self.verticalAngle = 0
+		self.activeMode = "Default"
+	end
+	function CameraController:onStart()
+		RunService.RenderStepped:Connect(function()
+			if self.activeMode == "ShiftLock" then
+				self:updateShiftLockCamera()
+			end
+		end)
+		UserInputService.InputChanged:Connect(function(input)
+			if self.activeMode ~= "ShiftLock" then
+				return nil
+			end
+			if input.UserInputType == Enum.UserInputType.MouseMovement then
+				local mouseDelta = input.Delta
+				local _binding = cameraSettings.ShiftLock
+				local sensitivity = _binding.sensitivity
+				self.horizontalAngle -= (mouseDelta.X / Camera.ViewportSize.X) * sensitivity
+				self.verticalAngle -= (mouseDelta.Y / Camera.ViewportSize.Y) * sensitivity
+				self.verticalAngle = math.clamp(self.verticalAngle, verticalAngleMin, verticalAngleMax)
+			end
+		end)
+	end
+	function CameraController:setMode(mode)
+		print("[src/client/controllers/CameraController.ts:68]", `Camera mode set to: {mode}`)
+		self.activeMode = mode
+		repeat
+			if mode == "Default" then
+				Camera.CameraType = Enum.CameraType.Custom
+				local _result = Player.Character
+				if _result ~= nil then
+					_result = _result:FindFirstChildWhichIsA("Humanoid")
+				end
+				local _condition = _result
+				if _condition == nil then
+					_condition = nil
+				end
+				Camera.CameraSubject = _condition
+				UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+				break
+			end
+			if mode == "ShiftLock" then
+				Camera.CameraType = Enum.CameraType.Scriptable
+				UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+				-- Calculate angles from current camera look direction
+				local _result = Player.Character
+				if _result ~= nil then
+					_result = _result:FindFirstChild("HumanoidRootPart")
+				end
+				local hrp = _result
+				if hrp then
+					-- Get the direction from character to current camera position
+					local lookDirection = Camera.CFrame.LookVector
+					-- Calculate horizontal angle (Y-axis rotation)
+					self.horizontalAngle = math.atan2(-lookDirection.Z, lookDirection.X) - math.pi / 2
+					-- Calculate vertical angle (X-axis rotation)
+					local horizontalDistance = math.sqrt(lookDirection.X ^ 2 + lookDirection.Z ^ 2)
+					self.verticalAngle = -math.atan2(-lookDirection.Y, horizontalDistance)
+					self.verticalAngle = math.clamp(self.verticalAngle, verticalAngleMin, verticalAngleMax)
+				end
+				break
+			end
+		until true
+	end
+	function CameraController:updateShiftLockCamera()
+		local _result = Player.Character
+		if _result ~= nil then
+			_result = _result:FindFirstChild("HumanoidRootPart")
+		end
+		local hrp = _result
+		if not hrp then
+			return nil
+		end
+		local _binding = cameraSettings.ShiftLock
+		local offset = _binding.offset
+		local fieldOfView = _binding.fieldOfView
+		local lerpSpeed = _binding.lerpSpeed
+		local _cFrame = CFrame.new(hrp.Position)
+		local _arg0 = CFrame.Angles(0, self.horizontalAngle, 0)
+		local _arg0_1 = CFrame.Angles(self.verticalAngle, 0, 0)
+		local _cFrame_1 = CFrame.new(offset)
+		local desiredCFrame = _cFrame * _arg0 * _arg0_1 * _cFrame_1
+		Camera.CFrame = Camera.CFrame:Lerp(desiredCFrame, lerpSpeed)
+		Camera.FieldOfView = Camera.FieldOfView + (fieldOfView - Camera.FieldOfView) * lerpSpeed
+		local lookDir = Vector3.new(math.cos(self.horizontalAngle + math.pi / 2), 0, -math.sin(self.horizontalAngle + math.pi / 2))
+		hrp.CFrame = hrp.CFrame:Lerp(CFrame.new(hrp.Position, hrp.Position + lookDir), lerpSpeed / 2)
+	end
+	do
+		-- (Flamework) CameraController metadata
+		Reflect.defineMetadata(CameraController, "identifier", "client/controllers/CameraController@CameraController")
+		Reflect.defineMetadata(CameraController, "flamework:implements", { "$:flamework@OnStart" })
+	end
+end
+-- (Flamework) CameraController decorators
+Reflect.decorate(CameraController, "$:flamework@Controller", Controller, { {} })
+return {
+	CameraController = CameraController,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+        </Item>
+        <Item class="LocalScript" referent="11">
+          <Properties>
+            <string name="Name">main</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="Disabled">false</bool>
+            <ContentId name="LinkedSource">
+              <null>
+              </null>
+            </ContentId>
+            <token name="RunContext">0</token>
+            <bool name="DefinesCapabilities">false</bool>
+            <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Flamework = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Flamework
+Flamework._addPaths({ { "StarterPlayer", "StarterPlayerScripts", "TS", "classes" } })
+Flamework._addPaths({ { "StarterPlayer", "StarterPlayerScripts", "TS", "controllers" } })
+Flamework._addPaths({ { "StarterPlayer", "StarterPlayerScripts", "TS", "components" } })
+Flamework.ignite()
+print("[src/client/main.client.ts:9]", "Flamework client ignited!")
+]]></string>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+        </Item>
+        <Item class="LocalScript" referent="12">
+          <Properties>
+            <string name="Name">setCore</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="Disabled">false</bool>
+            <ContentId name="LinkedSource">
+              <null>
+              </null>
+            </ContentId>
+            <token name="RunContext">0</token>
+            <bool name="DefinesCapabilities">false</bool>
+            <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+]]></string>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="13">
+          <Properties>
+            <string name="Name">networking</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <ContentId name="LinkedSource">
+              <null>
+              </null>
+            </ContentId>
+            <bool name="DefinesCapabilities">false</bool>
+            <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local t = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out", "prelude").t
+local _networking = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "networking")
+local GlobalEvents = _networking.GlobalEvents
+local GlobalFunctions = _networking.GlobalFunctions
+local Events = GlobalEvents:createClient({}, {
+	incomingIds = {},
+	incoming = {},
+	incomingUnreliable = {},
+	outgoingIds = { "chooseRole", "startChoosing" },
+	outgoingUnreliable = {},
+	namespaceIds = {},
+	namespaces = {},
+})
+local Functions = GlobalFunctions:createClient({}, {
+	incomingIds = {},
+	incoming = {},
+	outgoingIds = { "useTool" },
+	outgoing = {
+		useTool = t.optional(t.boolean),
+	},
+	namespaceIds = {},
+	namespaces = {},
+})
+return {
+	Events = Events,
+	Functions = Functions,
+}
+]]></string>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+        </Item>
+        <Item class="Folder" referent="14">
+          <Properties>
+            <string name="Name">classes</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="DefinesCapabilities">false</bool>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+          <Item class="ModuleScript" referent="15">
+            <Properties>
+              <string name="Name">gitkeep</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+return nil
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+        </Item>
+        <Item class="Folder" referent="16">
+          <Properties>
+            <string name="Name">ui</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="DefinesCapabilities">false</bool>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+          <Item class="ModuleScript" referent="17">
+            <Properties>
+              <string name="Name">RoleSelection</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
+local function RoleSelection(_param)
+	local onChoose = _param.onChoose
+	return React.createElement("screengui", {
+		ResetOnSpawn = false,
+		IgnoreGuiInset = true,
+		key = "RoleSelection",
+	}, React.createElement("frame", {
+		Size = UDim2.fromScale(0.4, 0.3),
+		Position = UDim2.fromScale(0.3, 0.35),
+		BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+	}, React.createElement("uicorner", {
+		CornerRadius = UDim.new(0, 8),
+	}), React.createElement("textlabel", {
+		Size = UDim2.fromScale(1, 0.3),
+		BackgroundTransparency = 1,
+		Text = "Choose Your Role",
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		Font = Enum.Font.SourceSansBold,
+	}), React.createElement("textbutton", {
+		Size = UDim2.fromScale(0.35, 0.35),
+		Position = UDim2.fromScale(0.1, 0.5),
+		BackgroundColor3 = Color3.fromRGB(80, 80, 80),
+		Text = "Outlaw",
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		Font = Enum.Font.SourceSansBold,
+		Modal = true,
+		Event = {
+			MouseButton1Click = function()
+				return onChoose("Outlaw")
+			end,
+		},
+	}, React.createElement("uicorner", {
+		CornerRadius = UDim.new(0, 6),
+	})), React.createElement("textbutton", {
+		Size = UDim2.fromScale(0.35, 0.35),
+		Position = UDim2.fromScale(0.55, 0.5),
+		BackgroundColor3 = Color3.fromRGB(80, 80, 80),
+		Text = "Marshall",
+		TextScaled = true,
+		TextColor3 = Color3.fromRGB(255, 255, 255),
+		Font = Enum.Font.SourceSansBold,
+		Modal = true,
+		Event = {
+			MouseButton1Click = function()
+				return onChoose("Marshall")
+			end,
+		},
+	}, React.createElement("uicorner", {
+		CornerRadius = UDim.new(0, 6),
+	}))))
+end
+return {
+	RoleSelection = RoleSelection,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+        </Item>
+      </Item>
+      <Item class="LocalScript" referent="18">
+        <Properties>
+          <string name="Name">RbxCharacterSounds</string>
+          <BinaryString name="AttributesSerialize"></BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="Disabled">false</bool>
+          <ContentId name="LinkedSource">
+            <null>
+            </null>
+          </ContentId>
+          <token name="RunContext">0</token>
+          <bool name="DefinesCapabilities">false</bool>
+          <string name="Source"><![CDATA[--!nonstrict
+-- Roblox character sound script
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local SoundService = game:GetService("SoundService")
+
+local AtomicBinding = require(script:WaitForChild("AtomicBinding"))
+
+type Playable = Sound | AudioPlayer
+
+local function loadFlag(flag: string)
+	local success, result = pcall(function()
+		return UserSettings():IsUserFeatureEnabled(flag)
+	end)
+	return success and result
+end
+
+local FFlagUserSoundsUseRelativeVelocity = loadFlag('UserSoundsUseRelativeVelocity2')
+local FFlagUserNewCharacterSoundsApi = loadFlag('UserNewCharacterSoundsApi3')
+
+local SOUND_DATA : { [string]: {[string]: any}} = {
+	Climbing = {
+		SoundId = "rbxasset://sounds/action_footsteps_plastic.mp3",
+		Looped = true,
+	},
+	Died = {
+		SoundId = "rbxasset://sounds/uuhhh.mp3",
+	},
+	FreeFalling = {
+		SoundId = "rbxasset://sounds/action_falling.ogg",
+		Looped = true,
+	},
+	GettingUp = {
+		SoundId = "rbxasset://sounds/action_get_up.mp3",
+	},
+	Jumping = {
+		SoundId = "rbxasset://sounds/action_jump.mp3",
+	},
+	Landing = {
+		SoundId = "rbxasset://sounds/action_jump_land.mp3",
+	},
+	Running = {
+		SoundId = "rbxasset://sounds/action_footsteps_plastic.mp3",
+		Looped = true,
+		Pitch = 1.85,
+	},
+	Splash = {
+		SoundId = "rbxasset://sounds/impact_water.mp3",
+	},
+	Swimming = {
+		SoundId = "rbxasset://sounds/action_swim.mp3",
+		Looped = true,
+		Pitch = 1.6,
+	},
+}
+
+local AUDIOPLAYER_DATA : { [string]: {[string]: any}} = {
+	Climbing = {
+		AssetId = "rbxasset://sounds/action_footsteps_plastic.mp3",
+		Looping = true,
+	},
+	Died = {
+		AssetId = "rbxasset://sounds/uuhhh.mp3",
+	},
+	FreeFalling = {
+		AssetId = "rbxasset://sounds/action_falling.ogg",
+		Looping = true,
+	},
+	GettingUp = {
+		AssetId = "rbxasset://sounds/action_get_up.mp3",
+	},
+	Jumping = {
+		AssetId = "rbxasset://sounds/action_jump.mp3",
+	},
+	Landing = {
+		AssetId = "rbxasset://sounds/action_jump_land.mp3",
+	},
+	Running = {
+		AssetId = "rbxasset://sounds/action_footsteps_plastic.mp3",
+		Looping = true,
+		PlaybackSpeed = 1.85,
+	},
+	Splash = {
+		AssetId = "rbxasset://sounds/impact_water.mp3",
+	},
+	Swimming = {
+		AssetId = "rbxasset://sounds/action_swim.mp3",
+		Looping = true,
+		PlaybackSpeed = 1.6,
+	},
+}
+
+-- map a value from one range to another
+local function map(x: number, inMin: number, inMax: number, outMin: number, outMax: number): number
+	return (x - inMin)*(outMax - outMin)/(inMax - inMin) + outMin
+end
+
+local function getRelativeVelocity(cm, velocity)
+	if not cm then
+		return velocity
+	end
+	local activeSensor = cm.ActiveController and
+	(
+		(cm.ActiveController:IsA("GroundController") and cm.GroundSensor) or
+		(cm.ActiveController:IsA("ClimbController") and cm.ClimbSensor)
+	)
+	if activeSensor and activeSensor.SensedPart then
+		-- Calculate the platform relative velocity by subtracting the velocity of the surface we're attached to or standing on.
+		local platformVelocity = activeSensor.SensedPart:GetVelocityAtPosition(cm.RootPart.Position)
+		return velocity - platformVelocity
+	end
+	return velocity
+end
+
+local function playSound(sound: Playable, continue: boolean?)
+	if not continue then
+		(sound :: any).TimePosition = 0
+	end
+	if FFlagUserNewCharacterSoundsApi and sound:IsA("AudioPlayer") then
+		sound:Play()
+	else
+		(sound :: Sound).Playing = true
+	end
+end
+
+local function stopSound(sound: Playable)
+	if FFlagUserNewCharacterSoundsApi and sound:IsA("AudioPlayer") then
+		sound:Stop()
+	else
+		(sound :: Sound).Playing = false
+	end
+end
+
+local function playSoundIf(sound: Playable, condition: boolean)
+	if FFlagUserNewCharacterSoundsApi and sound:IsA("AudioPlayer") then
+		if (sound.IsPlaying and not condition) then
+			sound:Stop()
+		elseif (not sound.IsPlaying and condition) then
+			sound:Play()
+		end
+	else
+		(sound :: Sound).Playing = condition
+	end
+end
+
+local function setSoundLooped(sound: Playable, isLooped: boolean)
+	if FFlagUserNewCharacterSoundsApi and sound:IsA("AudioPlayer") then
+		sound.Looping = isLooped
+	else
+		(sound :: Sound).Looped = isLooped
+	end
+end
+
+local function shallowCopy(t)
+	local out = {}
+	for k, v in pairs(t) do
+		out[k] = v
+	end
+	return out
+end
+
+local function initializeSoundSystem(instances: { [string]: Instance })
+	local humanoid = instances.humanoid
+	local rootPart = instances.rootPart
+	local audioEmitter = nil
+	local cm = nil
+	if FFlagUserSoundsUseRelativeVelocity then
+		local character = humanoid.Parent
+		cm = character:FindFirstChild('ControllerManager')
+	end
+
+	local sounds: {[string]: Playable} = {}
+
+	if FFlagUserNewCharacterSoundsApi and SoundService.CharacterSoundsUseNewApi == Enum.RolloutState.Enabled then
+		-- initialize Audio Emitter
+		local localPlayer = Players.LocalPlayer
+		local character = localPlayer.Character
+		local curve = {}
+		local i : number = 5
+		local step : number = 1.25 -- determines how fine-grained the curve gets sampled
+		while i < 150 do
+			curve[i] = 5 / i;
+			i *= step;
+		end
+		curve[150] = 0
+		audioEmitter = Instance.new("AudioEmitter", character)
+		audioEmitter.Name = "RbxCharacterSoundsEmitter"
+		audioEmitter:SetDistanceAttenuation(curve)
+		-- initialize sounds
+		for name: string, props: {[string]: any} in pairs(AUDIOPLAYER_DATA) do
+			local sound = Instance.new("AudioPlayer")
+			local audioPlayerWire: Wire = Instance.new("Wire")
+			sound.Name = name
+			audioPlayerWire.Name = name .. "Wire"
+			-- set default values
+			sound.Archivable = false
+			sound.Volume = 0.65
+			for propName, propValue: any in pairs(props) do
+				(sound :: any)[propName] = propValue
+			end
+			sound.Parent = rootPart
+			audioPlayerWire.Parent = sound
+			audioPlayerWire.SourceInstance = sound
+			audioPlayerWire.TargetInstance = audioEmitter
+			sounds[name] = sound
+		end
+	else
+		-- initialize sounds
+		for name: string, props: {[string]: any} in pairs(SOUND_DATA) do
+			local sound = Instance.new("Sound")
+			sound.Name = name
+			-- set default values
+			sound.Archivable = false
+			sound.RollOffMinDistance = 5
+			sound.RollOffMaxDistance = 150
+			sound.Volume = 0.65
+			for propName, propValue: any in pairs(props) do
+				(sound :: any)[propName] = propValue
+			end
+			sound.Parent = rootPart
+			sounds[name] = sound
+		end
+	end
+
+	local playingLoopedSounds: {[Playable]: boolean?} = {}
+
+	local function stopPlayingLoopedSounds(except: Playable?)
+		except = except or nil --default value
+		for sound in pairs(shallowCopy(playingLoopedSounds)) do
+			if sound ~= except then
+				stopSound(sound)
+				playingLoopedSounds[sound] = nil
+			end
+		end
+	end
+
+	-- state transition callbacks.
+	local stateTransitions: {[Enum.HumanoidStateType]: () -> ()} = {
+		[Enum.HumanoidStateType.FallingDown] = function()
+			stopPlayingLoopedSounds()
+		end,
+
+		[Enum.HumanoidStateType.GettingUp] = function()
+			stopPlayingLoopedSounds()
+			playSound(sounds.GettingUp)
+		end,
+
+		[Enum.HumanoidStateType.Jumping] = function()
+			stopPlayingLoopedSounds()
+			playSound(sounds.Jumping)
+		end,
+
+		[Enum.HumanoidStateType.Swimming] = function()
+			local verticalSpeed = math.abs(rootPart.AssemblyLinearVelocity.Y)
+			if verticalSpeed > 0.1 then
+				(sounds.Splash :: any).Volume = math.clamp(map(verticalSpeed, 100, 350, 0.28, 1), 0, 1)
+				playSound(sounds.Splash)
+			end
+			stopPlayingLoopedSounds(sounds.Swimming)
+			playSound(sounds.Swimming, true)
+			playingLoopedSounds[sounds.Swimming] = true
+		end,
+
+		[Enum.HumanoidStateType.Freefall] = function()
+			(sounds.FreeFalling :: any).Volume = 0
+			stopPlayingLoopedSounds(sounds.FreeFalling)
+			
+			setSoundLooped(sounds.FreeFalling, true)
+			if sounds.FreeFalling:IsA("Sound") then
+				sounds.FreeFalling.PlaybackRegionsEnabled = true
+			end
+			(sounds.FreeFalling :: any).LoopRegion = NumberRange.new(2, 9)
+			playSound(sounds.FreeFalling)
+			
+			playingLoopedSounds[sounds.FreeFalling] = true
+		end,
+
+		[Enum.HumanoidStateType.Landed] = function()
+			stopPlayingLoopedSounds()
+			local verticalSpeed = math.abs(rootPart.AssemblyLinearVelocity.Y)
+			if verticalSpeed > 75 then
+				(sounds.Landing :: any).Volume = math.clamp(map(verticalSpeed, 50, 100, 0, 1), 0, 1)
+				playSound(sounds.Landing)
+			end
+		end,
+
+		[Enum.HumanoidStateType.Running] = function()
+			stopPlayingLoopedSounds(sounds.Running)
+			playSound(sounds.Running, true)
+			playingLoopedSounds[sounds.Running] = true
+		end,
+
+		[Enum.HumanoidStateType.Climbing] = function()
+			local sound = sounds.Climbing
+			local partVelocity = rootPart.AssemblyLinearVelocity
+			local velocity = if FFlagUserSoundsUseRelativeVelocity then getRelativeVelocity(cm, partVelocity) else partVelocity
+			if math.abs(velocity.Y) > 0.1 then
+				playSound(sound, true)
+				stopPlayingLoopedSounds(sound)
+			else
+				stopPlayingLoopedSounds()
+			end
+			playingLoopedSounds[sound] = true
+		end,
+
+		[Enum.HumanoidStateType.Seated] = function()
+			stopPlayingLoopedSounds()
+		end,
+
+		[Enum.HumanoidStateType.Dead] = function()
+			stopPlayingLoopedSounds()
+			playSound(sounds.Died)
+		end,
+	}
+
+	-- updaters for looped sounds
+	local loopedSoundUpdaters: {[Playable]: (number, Playable, Vector3) -> ()} = {
+		[sounds.Climbing] = function(dt: number, sound: Playable, vel: Vector3)
+			local velocity = if FFlagUserSoundsUseRelativeVelocity then getRelativeVelocity(cm, vel) else vel
+			playSoundIf(sound, velocity.Magnitude > 0.1)
+		end,
+
+		[sounds.FreeFalling] = function(dt: number, sound: Playable, vel: Vector3): ()
+			if vel.Magnitude > 75 then
+				(sound :: any).Volume = math.clamp((sound :: any).Volume + 0.9*dt, 0, 1)
+			else
+				(sound :: any).Volume = 0
+			end
+		end,
+
+		[sounds.Running] = function(dt: number, sound: Playable, vel: Vector3)
+			playSoundIf(sound, vel.Magnitude > 0.5 and humanoid.MoveDirection.Magnitude > 0.5)
+		end,
+	}
+
+	-- state substitutions to avoid duplicating entries in the state table
+	local stateRemap: {[Enum.HumanoidStateType]: Enum.HumanoidStateType} = {
+		[Enum.HumanoidStateType.RunningNoPhysics] = Enum.HumanoidStateType.Running,
+	}
+
+	local activeState: Enum.HumanoidStateType = stateRemap[humanoid:GetState()] or humanoid:GetState()
+
+	local function transitionTo(state)
+		local transitionFunc: () -> () = stateTransitions[state]
+
+		if transitionFunc then
+			transitionFunc()
+		end
+
+		activeState = state
+	end
+
+	transitionTo(activeState)
+
+	local stateChangedConn = humanoid.StateChanged:Connect(function(_, state)
+		state = stateRemap[state] or state
+
+		if state ~= activeState then
+			transitionTo(state)
+		end
+	end)
+
+	local steppedConn = RunService.Stepped:Connect(function(_, worldDt: number)
+		-- update looped sounds on stepped
+		for sound in pairs(playingLoopedSounds) do
+			local updater: (number, Playable, Vector3) -> () = loopedSoundUpdaters[sound]
+
+			if updater then
+				updater(worldDt, sound, rootPart.AssemblyLinearVelocity)
+			end
+		end
+	end)
+
+	local function terminate()
+		stateChangedConn:Disconnect()
+		steppedConn:Disconnect()
+
+		-- Unparent all sounds and empty sounds table
+		-- This is needed in order to support the case where initializeSoundSystem might be called more than once for the same player,
+		-- which might happen in case player character is unparented and parented back on server and reset-children mechanism is active.
+		for name: string, sound: Playable in pairs(sounds) do
+			sound:Destroy()
+		end
+		table.clear(sounds)
+	end
+
+	return terminate
+end
+
+local binding = AtomicBinding.new({
+	humanoid = "Humanoid",
+	rootPart = "HumanoidRootPart",
+}, initializeSoundSystem)
+
+local playerConnections = {}
+
+local function characterAdded(character)
+	binding:bindRoot(character)
+end
+
+local function characterRemoving(character)
+	binding:unbindRoot(character)
+end
+
+local function playerAdded(player: Player)
+	local connections = playerConnections[player]
+	if not connections then
+		connections = {}
+		playerConnections[player] = connections
+	end
+
+	if player.Character then
+		characterAdded(player.Character)
+	end
+	table.insert(connections, player.CharacterAdded:Connect(characterAdded))
+	table.insert(connections, player.CharacterRemoving:Connect(characterRemoving))
+end
+
+local function playerRemoving(player: Player)
+	local connections = playerConnections[player]
+	if connections then
+		for _, conn in ipairs(connections) do
+			conn:Disconnect()
+		end
+		playerConnections[player] = nil
+	end
+
+	if player.Character then
+		characterRemoving(player.Character)
+	end
+end
+
+for _, player in ipairs(Players:GetPlayers()) do
+	task.spawn(playerAdded, player)
+end
+Players.PlayerAdded:Connect(playerAdded)
+Players.PlayerRemoving:Connect(playerRemoving)
+]]></string>
+          <int64 name="SourceAssetId">-1</int64>
+          <BinaryString name="Tags"></BinaryString>
+        </Properties>
+        <Item class="ModuleScript" referent="19">
+          <Properties>
+            <string name="Name">AtomicBinding</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <ContentId name="LinkedSource">
+              <null>
+              </null>
+            </ContentId>
+            <bool name="DefinesCapabilities">false</bool>
+            <string name="Source"><![CDATA[--!nonstrict
+local ROOT_ALIAS = "root"
+
+local function parsePath(pathStr)
+	local pathArray = string.split(pathStr, "/")
+	for idx = #pathArray, 1, -1 do
+		if pathArray[idx] == "" then
+			table.remove(pathArray, idx)
+		end
+	end
+	return pathArray
+end
+
+local function isManifestResolved(resolvedManifest, manifestSizeTarget)
+	local manifestSize = 0
+	for _ in pairs(resolvedManifest) do
+		manifestSize += 1
+	end
+
+	assert(manifestSize <= manifestSizeTarget, manifestSize)
+	return manifestSize == manifestSizeTarget
+end
+
+local function unbindNodeDescend(node, resolvedManifest)
+	if node.instance == nil then
+		return -- Do not try to unbind nodes that are already unbound
+	end
+
+	node.instance = nil
+
+	local connections = node.connections
+	if connections then
+		for _, conn in ipairs(connections) do
+			conn:Disconnect()
+		end
+		table.clear(connections)
+	end
+
+	if resolvedManifest and node.alias then
+		resolvedManifest[node.alias] = nil
+	end
+
+	local children = node.children
+	if children then
+		for _, childNode in pairs(children) do
+			unbindNodeDescend(childNode, resolvedManifest)
+		end
+	end
+end
+
+local AtomicBinding = {}
+AtomicBinding.__index = AtomicBinding
+
+function AtomicBinding.new(manifest, boundFn)
+	local dtorMap = {} -- { [root] -> dtor }
+	local connections = {} -- { Connection, ... }
+	local rootInstToRootNode = {} -- { [root] -> rootNode }
+	local rootInstToManifest = {} -- { [root] -> { [alias] -> instance } }
+
+	local parsedManifest = {} -- { [alias] = {Name, ...} }
+	local manifestSizeTarget = 1 -- Add 1 because root isn't explicitly on the manifest	
+	
+	for alias, rawPath in pairs(manifest) do
+		parsedManifest[alias] = parsePath(rawPath)
+		manifestSizeTarget += 1
+	end
+
+	return setmetatable({
+		_boundFn = boundFn,
+		_parsedManifest = parsedManifest,
+		_manifestSizeTarget = manifestSizeTarget,
+		
+		_dtorMap = dtorMap,
+		_connections = connections,
+		_rootInstToRootNode = rootInstToRootNode,
+		_rootInstToManifest = rootInstToManifest,
+	}, AtomicBinding)
+end
+
+function AtomicBinding:_startBoundFn(root, resolvedManifest)
+	local boundFn = self._boundFn
+	local dtorMap = self._dtorMap
+	
+	local oldDtor = dtorMap[root]
+	if oldDtor then
+		oldDtor()
+		dtorMap[root] = nil
+	end
+
+	local dtor = boundFn(resolvedManifest)
+	if dtor then
+		dtorMap[root] = dtor
+	end
+end
+
+function AtomicBinding:_stopBoundFn(root)
+	local dtorMap = self._dtorMap
+	
+	local dtor = dtorMap[root]
+	if dtor then
+		dtor()
+		dtorMap[root] = nil
+	end
+end
+
+function AtomicBinding:bindRoot(root)
+	debug.profilebegin("AtomicBinding:BindRoot")
+	
+	local parsedManifest = self._parsedManifest
+	local rootInstToRootNode = self._rootInstToRootNode
+	local rootInstToManifest = self._rootInstToManifest
+	local manifestSizeTarget = self._manifestSizeTarget
+	
+	assert(rootInstToManifest[root] == nil)
+
+	local resolvedManifest = {}
+	rootInstToManifest[root] = resolvedManifest
+
+	debug.profilebegin("BuildTree")
+
+	local rootNode = {}
+	rootNode.alias = ROOT_ALIAS
+	rootNode.instance = root
+	if next(parsedManifest) then
+		-- No need to assign child data if there are no children
+		rootNode.children = {}
+		rootNode.connections = {}
+	end
+
+	rootInstToRootNode[root] = rootNode
+
+	for alias, parsedPath in pairs(parsedManifest) do
+		local parentNode = rootNode
+
+		for idx, childName in ipairs(parsedPath) do
+			local leaf = idx == #parsedPath
+			local childNode = parentNode.children[childName] or {}
+
+			if leaf then
+				if childNode.alias ~= nil then
+					error("Multiple aliases assigned to one instance")
+				end
+
+				childNode.alias = alias
+
+			else
+				childNode.children = childNode.children or {}
+				childNode.connections = childNode.connections or {}
+			end
+
+			parentNode.children[childName] = childNode
+			parentNode = childNode
+		end
+	end
+
+	debug.profileend() -- BuildTree
+
+	-- Recursively descend into the tree, resolving each node.
+	-- Nodes start out as empty and instance-less; the resolving process discovers instances to map to nodes.
+	local function processNode(node)
+		local instance = assert(node.instance)
+
+		local children = node.children
+		local alias = node.alias
+		local isLeaf = not children
+
+		if alias then
+			resolvedManifest[alias] = instance
+		end
+
+		if not isLeaf then
+			local function processAddChild(childInstance)
+				local childName = childInstance.Name
+				local childNode = children[childName]
+				if not childNode or childNode.instance ~= nil then
+					return
+				end
+
+				childNode.instance = childInstance
+				processNode(childNode)
+			end
+
+			local function processDeleteChild(childInstance)
+				-- Instance deletion - Parent A detects that child B is being removed
+				--    1. A removes B from `children`
+				--    2. A traverses down from B,
+				--       i.  Disconnecting inputs
+				--       ii. Removing nodes from the resolved manifest
+				--    3. stopBoundFn is called because we know the tree is no longer complete, or at least has to be refreshed
+				-- 	  4. We search A for a replacement for B, and attempt to re-resolve using that replacement if it exists.
+				-- To support the above sanely, processAddChild needs to avoid resolving nodes that are already resolved.
+
+				local childName = childInstance.Name
+				local childNode = children[childName]
+
+				if not childNode then
+					return -- There's no child node corresponding to the deleted instance, ignore
+				end
+
+				if childNode.instance ~= childInstance then
+					return -- A child was removed with the same name as a node instance, ignore
+				end
+
+				self:_stopBoundFn(root) -- Happens before the tree is unbound so the manifest is still valid in the destructor.
+				unbindNodeDescend(childNode, resolvedManifest) -- Unbind the tree
+
+				assert(childNode.instance == nil) -- If this triggers, unbindNodeDescend failed
+
+				-- Search for a replacement
+				local replacementChild = instance:FindFirstChild(childName)
+				if replacementChild then
+					processAddChild(replacementChild)
+				end
+			end
+
+			for _, child in ipairs(instance:GetChildren()) do
+				processAddChild(child)
+			end
+
+			table.insert(node.connections, instance.ChildAdded:Connect(processAddChild))
+			table.insert(node.connections, instance.ChildRemoved:Connect(processDeleteChild))
+		end
+
+		if isLeaf and isManifestResolved(resolvedManifest, manifestSizeTarget) then
+			self:_startBoundFn(root, resolvedManifest)
+		end
+	end
+
+	debug.profilebegin("ResolveTree")
+	processNode(rootNode)
+	debug.profileend() -- ResolveTree
+	
+	debug.profileend() -- AtomicBinding:BindRoot
+end
+
+function AtomicBinding:unbindRoot(root)
+	local rootInstToRootNode = self._rootInstToRootNode
+	local rootInstToManifest = self._rootInstToManifest
+	
+	self:_stopBoundFn(root)
+
+	local rootNode = rootInstToRootNode[root]
+	if rootNode then
+		local resolvedManifest = assert(rootInstToManifest[root])
+		unbindNodeDescend(rootNode, resolvedManifest)
+		rootInstToRootNode[root] = nil
+	end
+
+	rootInstToManifest[root] = nil
+end
+
+function AtomicBinding:destroy()
+	debug.profilebegin("AtomicBinding:destroy")
+
+	for _, dtor in pairs(self._dtorMap) do
+		dtor:destroy()
+	end
+	table.clear(self._dtorMap)
+
+	for _, conn in ipairs(self._connections) do
+		conn:Disconnect()
+	end
+	table.clear(self._connections)
+
+	local rootInstToManifest = self._rootInstToManifest
+	for rootInst, rootNode in pairs(self._rootInstToRootNode) do
+		local resolvedManifest = assert(rootInstToManifest[rootInst])
+		unbindNodeDescend(rootNode, resolvedManifest)
+	end
+	table.clear(self._rootInstToManifest)
+	table.clear(self._rootInstToRootNode)
+
+	debug.profileend()
+end
+
+return AtomicBinding
+]]></string>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+        </Item>
+      </Item>
+    </Item>
+    <Item class="StarterCharacterScripts" referent="20">
+      <Properties>
+        <string name="Name">StarterCharacterScripts</string>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <int64 name="SourceAssetId">-1</int64>
+        <BinaryString name="Tags"></BinaryString>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>

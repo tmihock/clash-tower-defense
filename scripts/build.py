@@ -4,8 +4,8 @@ import sys
 
 def main():
 	# Allows use on any os's file systems
-	python_script = os.path.join("scripts", "fixLighting.py")
-	lua_script = os.path.join("scripts", "save.luau")
+	fix_lighting = os.path.join("scripts", "fixLighting.py")
+	save_models = os.path.join("scripts", "save.luau")
 
 	try:
 		# Run rbxtsc
@@ -13,13 +13,14 @@ def main():
 		print(".ts files compiled.")
 
 		# idk if the error still happens
-		# Run python3 with the correct script path
-		# subprocess.run([sys.executable,	 python_script], check=True)
+		subprocess.run([sys.executable, fix_lighting], check=True)
 
-		# Run lune with the correct script path
-		subprocess.run(["lune", "run", lua_script], check=True)
+		# Save models to .rbxmx files
+		subprocess.run(["lune", "run", save_models], check=True)
 		print("Models saved to folder.")
 
+		# Fix error from rojo version or some shit
+	
 		# Run rojo build
 		subprocess.run(["rojo", "build", "-o", "build.rbxlx", "default.project.json"], check=True)
 

@@ -1,8 +1,7 @@
 --[[ 
 
-Reads .rbxl file and saves important stuff to /models folder
+Reads .rbxlx file and saves .rbxm instances to /models folder
 
-use npm run build to save files n shit
 
 ]]--
 local roblox = require("@lune/roblox")
@@ -41,7 +40,7 @@ fs.writeDir("models")
 
 for _, serviceName in ipairs(services) do
 	local service = game:GetService(serviceName)
-	fs.writeFile(`models/{service.Name}.rbxm`, roblox.serializeModel({ service }))
+	fs.writeFile(`models/{service.Name}.rbxmx`, roblox.serializeModel({ service }, true))
 end
 
 print("Saved models")

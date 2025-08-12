@@ -29,7 +29,7 @@ export class ItemController implements OnStart {
 				const itemName = tool.Name as ItemName
 				$assert(tToolName(itemName), `Bad tool name "${itemName}"`)
 
-				const serverInvoke = Functions.useTool.invoke(tool, input.UserInputType).then().catch(warn)
+				const serverInvoke = Functions.useTool.invoke(tool, input.UserInputType)
 
 				const itemInfo = ItemData[itemName]
 				if (itemInfo === undefined) return

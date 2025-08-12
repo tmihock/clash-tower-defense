@@ -31,6 +31,7 @@ export function RoleSelection({ onChoose }: RoleSelectionProps) {
 					TextScaled={true}
 					TextColor3={Color3.fromRGB(255, 255, 255)}
 					Font={Enum.Font.SourceSansBold}
+					Modal={true}
 					Event={{
 						MouseButton1Click: () => onChoose("Outlaw"),
 					}}
@@ -46,6 +47,7 @@ export function RoleSelection({ onChoose }: RoleSelectionProps) {
 					TextScaled={true}
 					TextColor3={Color3.fromRGB(255, 255, 255)}
 					Font={Enum.Font.SourceSansBold}
+					Modal={true}
 					Event={{
 						MouseButton1Click: () => onChoose("Marshall"),
 					}}

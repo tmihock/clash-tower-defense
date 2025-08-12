@@ -1,0 +1,48 @@
+<roblox version="4">
+  <Item class="Teams" referent="0">
+    <Properties>
+      <string name="Name">Teams</string>
+      <BinaryString name="AttributesSerialize"></BinaryString>
+      <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+      <bool name="DefinesCapabilities">false</bool>
+      <int64 name="SourceAssetId">-1</int64>
+      <BinaryString name="Tags"></BinaryString>
+    </Properties>
+    <Item class="Team" referent="1">
+      <Properties>
+        <string name="Name">Outlaw</string>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <bool name="AutoAssignable">false</bool>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <int64 name="SourceAssetId">-1</int64>
+        <BinaryString name="Tags"></BinaryString>
+        <int name="TeamColor">331</int>
+      </Properties>
+    </Item>
+    <Item class="Team" referent="2">
+      <Properties>
+        <string name="Name">Marshall</string>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <bool name="AutoAssignable">false</bool>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <int64 name="SourceAssetId">-1</int64>
+        <BinaryString name="Tags"></BinaryString>
+        <int name="TeamColor">102</int>
+      </Properties>
+    </Item>
+    <Item class="Team" referent="3">
+      <Properties>
+        <string name="Name">Choosing</string>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <bool name="AutoAssignable">true</bool>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <int64 name="SourceAssetId">-1</int64>
+        <BinaryString name="Tags"></BinaryString>
+        <int name="TeamColor">1</int>
+      </Properties>
+    </Item>
+  </Item>
+</roblox>
