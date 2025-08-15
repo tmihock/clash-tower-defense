@@ -17,6 +17,26 @@
         <int64 name="SourceAssetId">-1</int64>
         <BinaryString name="Tags">VGFnRWRpdG9yVGFnQ29udGFpbmVy</BinaryString>
       </Properties>
+      <Item class="Configuration" referent="2">
+        <Properties>
+          <string name="Name">Buyable</string>
+          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yDxRszD0I1SE/RwAcPwgAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIMAAAAbW9uZXlfZG9sbGFyBwAAAFZpc2libGUDAQ==</BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <int64 name="SourceAssetId">-1</int64>
+          <BinaryString name="Tags"></BinaryString>
+        </Properties>
+      </Item>
+      <Item class="Configuration" referent="3">
+        <Properties>
+          <string name="Name">Explodable</string>
+          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD2eazT6VjIo+J+rfPQgAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIEAAAAYm9tYgcAAABWaXNpYmxlAwE=</BinaryString>
+          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+          <bool name="DefinesCapabilities">false</bool>
+          <int64 name="SourceAssetId">-1</int64>
+          <BinaryString name="Tags"></BinaryString>
+        </Properties>
+      </Item>
     </Item>
   </Item>
 </roblox>

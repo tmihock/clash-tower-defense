@@ -80,7 +80,7 @@
           </Properties>
           <Item class="ModuleScript" referent="4">
             <Properties>
-              <string name="Name">gitkeep</string>
+              <string name="Name">GunClient</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
               <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
               <ContentId name="LinkedSource">
@@ -89,14 +89,158 @@
               </ContentId>
               <bool name="DefinesCapabilities">false</bool>
               <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-return nil
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Component = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "components", "out").Component
+local Subscribe = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "shared-components-flamework", "out").Subscribe
+local GunShared = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "components", "GunShared").GunShared
+local TAG_GUN = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "constants").TAG_GUN
+local GunServer
+do
+	local super = GunShared
+	GunServer = setmetatable({}, {
+		__tostring = function()
+			return "GunServer"
+		end,
+		__index = super,
+	})
+	GunServer.__index = GunServer
+	function GunServer.new(...)
+		local self = setmetatable({}, GunServer)
+		return self:constructor(...) or self
+	end
+	function GunServer:constructor(...)
+		super.constructor(self, ...)
+	end
+	function GunServer:onStart()
+		task.spawn(function()
+			while true do
+				local _value = task.wait(3)
+				if not (_value ~= 0 and _value == _value and _value) then
+					break
+				end
+				self:Increment()
+			end
+		end)
+	end
+	function GunServer:Increment()
+		-- Update ui
+	end
+	do
+		-- (Flamework) GunServer metadata
+		Reflect.defineMetadata(GunServer, "identifier", "client/components/GunClient@GunServer")
+		Reflect.defineMetadata(GunServer, "flamework:implements", { "$:flamework@OnStart" })
+	end
+	local _descriptor = Subscribe(function(state)
+		return state.ammo
+	end)(GunServer, "Increment", {
+		value = GunServer.Increment,
+	})
+	if _descriptor then
+		GunServer.Increment = _descriptor.value
+	end
+end
+-- (Flamework) GunServer decorators
+Reflect.decorate(GunServer, "$c:components@Component", Component, { {
+	tag = TAG_GUN,
+	attributes = {},
+} })
+return {
+	GunServer = GunServer,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="5">
+            <Properties>
+              <string name="Name">ExplodableClient</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local t = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out", "prelude").t
+local _components = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "components", "out")
+local Component = _components.Component
+local BaseComponent = _components.BaseComponent
+local TAG_EXPLODABLE = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "constants").TAG_EXPLODABLE
+local Events = TS.import(script, script.Parent.Parent, "networking").Events
+local Explodable
+do
+	local super = BaseComponent
+	Explodable = setmetatable({}, {
+		__tostring = function()
+			return "Explodable"
+		end,
+		__index = super,
+	})
+	Explodable.__index = Explodable
+	function Explodable.new(...)
+		local self = setmetatable({}, Explodable)
+		return self:constructor(...) or self
+	end
+	function Explodable:constructor(inventoryController)
+		super.constructor(self)
+		self.inventoryController = inventoryController
+		self.prompt = self.instance.promptPart.ProximityPrompt
+		self:updatePromptVisibility()
+		self:onAttributeChanged("exploded", function()
+			return self:updatePromptVisibility()
+		end)
+	end
+	function Explodable:updatePromptVisibility()
+		self.prompt.Enabled = self.inventoryController:playerHasItemOfName("Dynamite") and self.attributes.exploded == false
+	end
+	function Explodable:onStart()
+		Events.itemAdded:connect(function()
+			return self:updatePromptVisibility()
+		end)
+		Events.itemRemoved:connect(function()
+			return self:updatePromptVisibility()
+		end)
+	end
+	do
+		-- (Flamework) Explodable metadata
+		Reflect.defineMetadata(Explodable, "identifier", "client/components/ExplodableClient@Explodable")
+		Reflect.defineMetadata(Explodable, "flamework:parameters", { "client/controllers/InventoryController@InventoryController" })
+		Reflect.defineMetadata(Explodable, "flamework:implements", { "$:flamework@OnStart" })
+	end
+end
+-- (Flamework) Explodable decorators
+Reflect.decorate(Explodable, "$c:components@Component", Component, { {
+	tag = TAG_EXPLODABLE,
+	defaults = {
+		exploded = false,
+		regenTime = 2,
+	},
+	attributes = {
+		exploded = t.boolean,
+		regenTime = t.number,
+	},
+	instanceGuard = t.intersection(t.instanceIsA("Instance"), t.children({
+		promptPart = t.intersection(t.instanceIsA("BasePart"), t.children({
+			ProximityPrompt = t.instanceIsA("ProximityPrompt"),
+		})),
+		slots = t.instanceIsA("Folder"),
+	})),
+} })
+return {
+	Explodable = Explodable,
+}
 ]]></string>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="Folder" referent="5">
+        <Item class="Folder" referent="6">
           <Properties>
             <string name="Name">controllers</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -105,7 +249,7 @@ return nil
             <int64 name="SourceAssetId">-1</int64>
             <BinaryString name="Tags"></BinaryString>
           </Properties>
-          <Item class="ModuleScript" referent="6">
+          <Item class="ModuleScript" referent="7">
             <Properties>
               <string name="Name">ItemController</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -279,7 +423,7 @@ return {
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
-            <Item class="ModuleScript" referent="7">
+            <Item class="ModuleScript" referent="8">
               <Properties>
                 <string name="Name">CItemInfo</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -328,7 +472,7 @@ return {
               </Properties>
             </Item>
           </Item>
-          <Item class="ModuleScript" referent="8">
+          <Item class="ModuleScript" referent="9">
             <Properties>
               <string name="Name">MovementController</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -421,7 +565,7 @@ return {
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="9">
+          <Item class="ModuleScript" referent="10">
             <Properties>
               <string name="Name">RoleController</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -495,7 +639,7 @@ return {
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="10">
+          <Item class="ModuleScript" referent="11">
             <Properties>
               <string name="Name">CameraController</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -657,8 +801,81 @@ return {
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
+          <Item class="ModuleScript" referent="12">
+            <Properties>
+              <string name="Name">InventoryController</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+--[[
+	*
+	 * Incrementally add stuff here when needed
+	 
+]]
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local Players = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services").Players
+local player = Players.LocalPlayer
+local InventoryController
+do
+	InventoryController = setmetatable({}, {
+		__tostring = function()
+			return "InventoryController"
+		end,
+	})
+	InventoryController.__index = InventoryController
+	function InventoryController.new(...)
+		local self = setmetatable({}, InventoryController)
+		return self:constructor(...) or self
+	end
+	function InventoryController:constructor()
+	end
+	function InventoryController:onStart()
+	end
+	function InventoryController:playerHasItemOfName(name)
+		local char = player.Character
+		local backpack = player:FindFirstChildOfClass("Backpack")
+		if not char then
+			return false
+		end
+		if not backpack then
+			return false
+		end
+		local item = backpack:FindFirstChild(name) or char:FindFirstChild(name)
+		local _result = item
+		if _result ~= nil then
+			_result = _result:IsA("Tool")
+		end
+		local _condition = _result
+		if not _condition then
+			_condition = false
+		end
+		return _condition
+	end
+	do
+		-- (Flamework) InventoryController metadata
+		Reflect.defineMetadata(InventoryController, "identifier", "client/controllers/InventoryController@InventoryController")
+		Reflect.defineMetadata(InventoryController, "flamework:implements", { "$:flamework@OnStart" })
+	end
+end
+-- (Flamework) InventoryController decorators
+Reflect.decorate(InventoryController, "$:flamework@Controller", Controller, { {} })
+return {
+	InventoryController = InventoryController,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
         </Item>
-        <Item class="LocalScript" referent="11">
+        <Item class="LocalScript" referent="13">
           <Properties>
             <string name="Name">main</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -683,7 +900,7 @@ print("[src/client/main.client.ts:9]", "Flamework client ignited!")
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="12">
+        <Item class="LocalScript" referent="14">
           <Properties>
             <string name="Name">setCore</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -701,7 +918,7 @@ print("[src/client/main.client.ts:9]", "Flamework client ignited!")
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="13">
+        <Item class="ModuleScript" referent="15">
           <Properties>
             <string name="Name">networking</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -718,10 +935,13 @@ local _networking = TS.import(script, game:GetService("ReplicatedStorage"), "TS"
 local GlobalEvents = _networking.GlobalEvents
 local GlobalFunctions = _networking.GlobalFunctions
 local Events = GlobalEvents:createClient({}, {
-	incomingIds = {},
-	incoming = {},
+	incomingIds = { "itemAdded", "itemRemoved" },
+	incoming = {
+		itemAdded = { { t.instanceIsA("Tool") }, nil },
+		itemRemoved = { { t.instanceIsA("Tool") }, nil },
+	},
 	incomingUnreliable = {},
-	outgoingIds = { "chooseRole", "startChoosing" },
+	outgoingIds = { "chooseRole", "startChoosing", "shootPlayer" },
 	outgoingUnreliable = {},
 	namespaceIds = {},
 	namespaces = {},
@@ -729,9 +949,10 @@ local Events = GlobalEvents:createClient({}, {
 local Functions = GlobalFunctions:createClient({}, {
 	incomingIds = {},
 	incoming = {},
-	outgoingIds = { "useTool" },
+	outgoingIds = { "useTool", "canShoot" },
 	outgoing = {
 		useTool = t.optional(t.boolean),
+		canShoot = t.boolean,
 	},
 	namespaceIds = {},
 	namespaces = {},
@@ -745,7 +966,7 @@ return {
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="Folder" referent="14">
+        <Item class="Folder" referent="16">
           <Properties>
             <string name="Name">classes</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -754,25 +975,8 @@ return {
             <int64 name="SourceAssetId">-1</int64>
             <BinaryString name="Tags"></BinaryString>
           </Properties>
-          <Item class="ModuleScript" referent="15">
-            <Properties>
-              <string name="Name">gitkeep</string>
-              <BinaryString name="AttributesSerialize"></BinaryString>
-              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-              <ContentId name="LinkedSource">
-                <null>
-                </null>
-              </ContentId>
-              <bool name="DefinesCapabilities">false</bool>
-              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-return nil
-]]></string>
-              <int64 name="SourceAssetId">-1</int64>
-              <BinaryString name="Tags"></BinaryString>
-            </Properties>
-          </Item>
         </Item>
-        <Item class="Folder" referent="16">
+        <Item class="Folder" referent="17">
           <Properties>
             <string name="Name">ui</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -781,7 +985,7 @@ return nil
             <int64 name="SourceAssetId">-1</int64>
             <BinaryString name="Tags"></BinaryString>
           </Properties>
-          <Item class="ModuleScript" referent="17">
+          <Item class="ModuleScript" referent="18">
             <Properties>
               <string name="Name">RoleSelection</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -857,7 +1061,7 @@ return {
           </Item>
         </Item>
       </Item>
-      <Item class="LocalScript" referent="18">
+      <Item class="LocalScript" referent="19">
         <Properties>
           <string name="Name">RbxCharacterSounds</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1311,7 +1515,7 @@ Players.PlayerRemoving:Connect(playerRemoving)
           <int64 name="SourceAssetId">-1</int64>
           <BinaryString name="Tags"></BinaryString>
         </Properties>
-        <Item class="ModuleScript" referent="19">
+        <Item class="ModuleScript" referent="20">
           <Properties>
             <string name="Name">AtomicBinding</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1604,7 +1808,7 @@ return AtomicBinding
         </Item>
       </Item>
     </Item>
-    <Item class="StarterCharacterScripts" referent="20">
+    <Item class="StarterCharacterScripts" referent="21">
       <Properties>
         <string name="Name">StarterCharacterScripts</string>
         <BinaryString name="AttributesSerialize"></BinaryString>

@@ -45,8 +45,7 @@ export class ItemService implements OnStart {
 
 	private playerCanUseTool(player: Player, itemName: ItemName) {
 		return (
-			this.inventoryService.playerHasItemOfNameInInventory(player, itemName) ||
-			player.Character !== undefined
+			this.inventoryService.playerHasItemOfName(player, itemName) || player.Character !== undefined
 		)
 	}
 }

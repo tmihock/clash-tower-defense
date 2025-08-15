@@ -3,16 +3,24 @@ import { ChoosableRole, Role } from "./types"
 
 // Client -> Server events
 interface ServerEvents {
+	// Teams
 	chooseRole(role: ChoosableRole): void
 	startChoosing(): void
+	// Guns
+	shootPlayer(tool: Tool, player: Player): void
 }
 
 // Server -> Client events
-interface ClientEvents {}
+interface ClientEvents {
+	itemAdded(tool: Tool): void
+	itemRemoved(tool: Tool): void
+}
 
 // Client -> Server -> Client functions
 interface ServerFunctions {
 	useTool(tool: Tool, input: Enum.UserInputType): boolean | undefined | void
+
+	canShoot(tool: Tool): boolean
 }
 
 // Server -> Client -> Server functions

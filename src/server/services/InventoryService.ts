@@ -3,9 +3,11 @@ import { DataIO, SaveableDataObject } from "./DataService"
 import { $terrify } from "rbxts-transformer-t-new"
 import { AvatarEditorService, CollectionService, ReplicatedStorage } from "@rbxts/services"
 import { OnPlayerAdded } from "./PlayerService"
-import { $assert, $print } from "rbxts-transform-debug"
+import { $assert, $print, $warn } from "rbxts-transform-debug"
 import { KEEP_INVENTORY_BETWEEN_SESSIONS, KEEP_INVENTORY_ON_DEATH } from "shared/constants"
 import { ItemName } from "shared/enum"
+import Signal from "@rbxts/lemon-signal"
+import { Events } from "server/networking"
 
 const SAVE_KEY = "inventory"
 const itemFolder = ReplicatedStorage.Items
@@ -25,6 +27,9 @@ export class InventoryService implements DataIO {
 	private playerBackpacks = new Map<Player, Backpack>() // Backpack instance
 	private backpackSaves = new Map<Player, Folder>() // Folder while character is not loaded
 	private playerHeldTools = new Map<Player, Tool | undefined>() // last held tool, only overridden, use getHeld to get the current held tool
+
+	private itemAddedSignals = new Map<Player, Signal<Tool>>()
+	private itemRemovedSignals = new Map<Player, Signal<Tool>>()
 
 	public giveItems(player: Player, names: ItemName[]) {
 		names.forEach(itemName => {
@@ -54,32 +59,44 @@ export class InventoryService implements DataIO {
 			error(`Item "${name}" not found in ReplicatedStorage`)
 		}
 
-		const clone = toolTemplate.Clone()
+		const newTool = toolTemplate.Clone()
 		for (const [k, v] of pairs(attributes)) {
-			clone.SetAttribute(k, v)
+			newTool.SetAttribute(k, v)
 		}
 
 		let activeFolder = backpack || saveFolder
 		if (!loaded) activeFolder = saveFolder // If method caller is onDataLoad
 
 		if (activeFolder) {
-			clone.Parent = activeFolder
-			const tag = clone.GetAttribute("tag")
+			newTool.Parent = activeFolder
+			const tag = newTool.GetAttribute("tag")
 			if (tag && typeIs(tag, "string")) CollectionService.AddTag(tag) // Creates component
 		} else {
 			error(`No backpack or save folder found for player ${player.Name}`)
 		}
+		this.itemAddedSignals.get(player)!.Fire(newTool)
 	}
 
-	public removeItem(player: Player, item: Tool): void {
-		if (this.playerOwnsItem(player, item)) {
-			item.Destroy()
+	public removeItem(player: Player, item: Tool): void
+	public removeItem(player: Player, item: ItemName): void
+	public removeItem(player: Player, item: Tool | ItemName): void {
+		if (typeIs(item, "string")) {
+			this.getOwnedItems(player)
+				.find(v => v.Name === (item as ItemName))
+				?.Destroy()
 		} else {
-			$print(item.GetFullName())
+			item = item as Tool
+			assert(item.IsA("Tool"))
+			if (this.playerOwnsTool(player, item)) {
+				item.Destroy()
+				this.itemRemovedSignals.get(player)!.Fire(item)
+			} else {
+				$warn(item.GetFullName(), " attempted to remove but not found")
+			}
 		}
 	}
 
-	public playerOwnsItem(player: Player, item: Tool): boolean {
+	public playerOwnsTool(player: Player, item: Tool): boolean {
 		const backpack = this.playerBackpacks.get(player)
 		if (!backpack) return false
 		const backpackItems = backpack.GetChildren()
@@ -94,11 +111,24 @@ export class InventoryService implements DataIO {
 		)
 	}
 
+	public playerOwnsItem(player: Player, item: ItemName): boolean {
+		const backpack = this.playerBackpacks.get(player)
+		if (!backpack) return false
+		const backpackItems = backpack.GetChildren()
+		const backpackStorage = this.backpackSaves.get(player)
+		if (!backpackStorage) return false
+		const storageItems = backpackStorage.GetChildren()
+
+		const allItems = [...backpackItems, ...storageItems, this.getHeld(player)] as Tool[]
+
+		return allItems.filter(v => v !== undefined).find(v => v?.Name === item) !== undefined
+	}
+
 	/**
 	 * Returns true if a tool of name `name` is in either Backpack or player's character
 	 * Assumes there isn't another instance with same name but isnt a tool
 	 */
-	public playerHasItemOfNameInInventory(player: Player, name: ItemName): boolean {
+	public playerHasItemOfName(player: Player, name: ItemName): boolean {
 		const char = player.Character
 		if (!char) return false
 
@@ -131,6 +161,14 @@ export class InventoryService implements DataIO {
 			return lastHeld
 		}
 		return undefined
+	}
+
+	public getItemAddedSignal(player: Player) {
+		return this.itemAddedSignals.get(player)!
+	}
+
+	public getItemRemovedSignal(player: Player) {
+		return this.itemRemovedSignals.get(player)!
 	}
 
 	private getToolsInInstance(folder: Instance): Tool[] {
@@ -234,6 +272,11 @@ export class InventoryService implements DataIO {
 		this.setupBackpackStorage(player)
 		this.keepInventory(player)
 
+		this.itemAddedSignals.set(player, new Signal())
+		this.itemRemovedSignals.set(player, new Signal())
+		this.itemAddedSignals.get(player)!.Connect(tool => Events.itemAdded.fire(player, tool))
+		this.itemRemovedSignals.get(player)!.Connect(tool => Events.itemRemoved.fire(player, tool))
+
 		if (!KEEP_INVENTORY_BETWEEN_SESSIONS) {
 			this.loadedPlayers.add(player)
 			return
@@ -245,9 +288,9 @@ export class InventoryService implements DataIO {
 		} else {
 			inv = [] as ItemInfo[]
 		}
+		this.loadedPlayers.add(player)
 
 		Promise.all(inv.map(item => this.giveItem(player, item))).await() // Give all items asynchronously, and wait for them to finish
-		this.loadedPlayers.add(player)
 	}
 
 	onDataSave(player: Player): SaveableDataObject<ItemInfo[]> {
@@ -256,6 +299,10 @@ export class InventoryService implements DataIO {
 		this.backpackSaves.delete(player)
 		this.playerHeldTools.delete(player)
 		this.loadedPlayers.delete(player)
+		this.itemAddedSignals.get(player)!.DisconnectAll()
+		this.itemAddedSignals.delete(player)
+		this.itemRemovedSignals.get(player)!.DisconnectAll()
+		this.itemRemovedSignals.delete(player)
 
 		if (!KEEP_INVENTORY_BETWEEN_SESSIONS) {
 			return {
