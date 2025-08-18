@@ -722,7 +722,7 @@ do
 		end)
 	end
 	function CameraController:setMode(mode)
-		print("[src/client/controllers/CameraController.ts:68]", `Camera mode set to: {mode}`)
+		-- $print(`Camera mode set to: ${mode}`)
 		self.activeMode = mode
 		repeat
 			if mode == "Default" then

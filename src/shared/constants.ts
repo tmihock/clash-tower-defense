@@ -16,3 +16,4 @@ export const BUY_RANGE = 10
 export const TAG_GUN = "Gun"
 export const TAG_BUYABLE = "Buyable"
 export const TAG_EXPLODABLE = "Explodable"
+export const TAG_HIT_DETECTOR = "Hit Detector"

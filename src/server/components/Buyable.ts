@@ -32,7 +32,6 @@ export class Buyable extends BaseComponent<Attributes, BuyableInstance> implemen
 			this.instance.Name in ShopInfo,
 			`Buyable "${this.instance.GetFullName()}" not found in ShopConfig`
 		)
-		$print(this)
 		this.info = ShopInfo[this.instance.Name as keyof typeof ShopInfo]
 		this.prompt = this.instance.promptPart.ProximityPrompt
 		const { price } = this.info

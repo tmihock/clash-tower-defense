@@ -67,6 +67,14 @@ export class Explodable extends BaseComponent<Attributes, ExplodableInstance> im
 		task.wait(5)
 		$print("Explodedd")
 		this.attributes.exploded = true
+		this.instance
+			.GetChildren()
+			.filter(i => i.IsA("BasePart"))
+			.forEach(basePart => {
+				basePart.Transparency = 0.5
+				basePart.CanCollide = false
+			})
+
 		task.wait(this.attributes.regenTime)
 		$print("rebuilding")
 		this.placedDynamite.forEach(instance => instance.Destroy())

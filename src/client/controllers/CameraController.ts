@@ -65,7 +65,7 @@ export class CameraController implements OnStart {
 	}
 
 	public setMode(mode: CameraMode) {
-		$print(`Camera mode set to: ${mode}`)
+		// $print(`Camera mode set to: ${mode}`)
 
 		this.activeMode = mode
 		switch (mode) {
