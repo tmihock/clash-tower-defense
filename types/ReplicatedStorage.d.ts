@@ -34,6 +34,9 @@ interface ReplicatedStorage extends Instance {
 		EnemyFolder: Folder & {
 			Gargoyle: Model
 		}
+		TowerFolder: Folder & {
+			jew: Model
+		}
 		Dynamite: Part & {
 			Mesh: SpecialMesh
 		}

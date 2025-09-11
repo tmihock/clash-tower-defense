@@ -1,12 +1,12 @@
 import { Service, OnStart, Flamework, Dependency } from "@flamework/core"
 import { Track } from "server/components/Track"
 import { ReplicatedStorage } from "@rbxts/services"
-import { EnemyConfig, EnemyName } from "shared/config/Enemy"
+import { EnemyConfig, EnemyName } from "shared/config/EnemyConfig"
 import { Component, Components } from "@flamework/components"
 import { Enemy } from "server/components/Enemy"
 
 const enemyFolder = ReplicatedStorage.Assets.EnemyFolder as never as Folder & {
-	[K in keyof typeof EnemyConfig]: Model
+	[K in EnemyName]: Model
 }
 
 @Service({})

@@ -1,27 +1,23 @@
 import { Flamework, OnStart } from "@flamework/core"
 import { Component, BaseComponent } from "@flamework/components"
 import { TAG_ENEMY } from "shared/constants"
-import { EnemyConfig, EnemyName } from "shared/config/Enemy"
+import { EnemyConfig, EnemyInfo, EnemyName } from "shared/config/EnemyConfig"
 import { Workspace } from "@rbxts/services"
 import { clock } from "shared/types"
 import Signal from "@rbxts/lemon-signal"
 
-interface EnemyInstance extends PVInstance {}
+interface EnemyInstance extends PVInstance {
+	hitbox: PVInstance
+}
 
-type Attributes = (typeof EnemyConfig)[keyof typeof EnemyConfig] & {
+type Attributes = EnemyInfo & {
 	timeSpawned: clock
 }
 
 @Component({
 	tag: TAG_ENEMY,
 	predicate: instance => Flamework.createGuard<EnemyName>()(instance.Name),
-	ancestorWhitelist: [Workspace],
-	defaults: {
-		health: 0,
-		damage: 0,
-		speed: 0,
-		timeSpawned: 0
-	}
+	ancestorWhitelist: [Workspace]
 })
 export class Enemy extends BaseComponent<Attributes, EnemyInstance> implements OnStart {
 	private enemyType = this.instance.Name as never as EnemyName

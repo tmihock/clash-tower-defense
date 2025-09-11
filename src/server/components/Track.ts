@@ -5,12 +5,14 @@ import { RunService, Workspace } from "@rbxts/services"
 import { Enemy } from "./Enemy"
 import { FolderWith } from "shared/types"
 import { GameService } from "server/services/GameService"
+import { Tower } from "./Tower"
 
 type NumberString = `${number}`
 
 interface TrackInstance extends Instance {
 	waypoints: FolderWith<BasePart>
 	enemies: Folder
+	towers: Folder
 }
 
 interface Attributes {}
@@ -49,7 +51,7 @@ export function getPositionOnPath(waypoints: Vector3[], speed: number, t: number
 export class Track extends BaseComponent<Attributes, TrackInstance> implements OnStart {
 	private trackLength: number
 
-	private activeEnemies = new Array<Enemy>()
+	private activeEnemies = new Set<Enemy>()
 	private waypoints = new Array<Vector3>()
 	private travelConnections = new Map<Enemy, RBXScriptConnection>()
 
@@ -67,14 +69,23 @@ export class Track extends BaseComponent<Attributes, TrackInstance> implements O
 
 	onStart() {}
 
+	public addTower(tower: Tower) {}
+
 	public addEnemy(enemy: Enemy) {
-		this.activeEnemies.push(enemy)
+		this.activeEnemies.add(enemy)
 		this.startEnemyTravel(enemy)
+	}
+
+	public getActiveEnemies(): Set<Enemy> {
+		return this.activeEnemies
 	}
 
 	private startEnemyTravel(enemy: Enemy) {
 		enemy.attributes.timeSpawned = os.clock()
-		enemy.destroying.Once(() => this.travelConnections.delete(enemy))
+		enemy.destroying.Once(() => {
+			this.activeEnemies.delete(enemy)
+			this.travelConnections.delete(enemy)
+		})
 
 		this.travelConnections.set(
 			enemy,
@@ -82,7 +93,7 @@ export class Track extends BaseComponent<Attributes, TrackInstance> implements O
 		)
 	}
 
-	incrementEnemyPosition(enemy: Enemy) {
+	private incrementEnemyPosition(enemy: Enemy) {
 		const { speed, timeSpawned } = enemy.attributes
 		const elapsed = os.clock() - timeSpawned
 
