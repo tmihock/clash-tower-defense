@@ -4,6 +4,7 @@ import { TAG_TRACK } from "shared/constants"
 import { RunService, Workspace } from "@rbxts/services"
 import { Enemy } from "./Enemy"
 import { FolderWith } from "shared/types"
+import { GameService } from "server/services/GameService"
 
 type NumberString = `${number}`
 
@@ -52,7 +53,7 @@ export class Track extends BaseComponent<Attributes, TrackInstance> implements O
 	private waypoints = new Array<Vector3>()
 	private travelConnections = new Map<Enemy, RBXScriptConnection>()
 
-	constructor() {
+	constructor(private gameService: GameService) {
 		super()
 
 		this.waypoints = this.instance.waypoints.GetChildren().map(v => v.Position)
@@ -97,9 +98,11 @@ export class Track extends BaseComponent<Attributes, TrackInstance> implements O
 
 		enemy.moveTo(pos, dir)
 
-		// Finished check
+		// Check if enemy reached the end
 		const distanceTravelled = speed * elapsed
 		if (distanceTravelled >= this.trackLength) {
+			const damage = enemy.attributes.damage
+			this.gameService.takeDamage(damage)
 			enemy.kill()
 		}
 	}
