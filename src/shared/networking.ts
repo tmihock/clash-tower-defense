@@ -1,27 +1,13 @@
 import { Networking } from "@flamework/networking"
-import { ChoosableRole, Role } from "./types"
 
 // Client -> Server events
-interface ServerEvents {
-	// Teams
-	chooseRole(role: ChoosableRole): void
-	startChoosing(): void
-	// Guns
-	shootPlayer(tool: Tool, player: Player): void
-}
+interface ServerEvents {}
 
 // Server -> Client events
-interface ClientEvents {
-	itemAdded(tool: Tool): void
-	itemRemoved(tool: Tool): void
-}
+interface ClientEvents {}
 
 // Client -> Server -> Client functions
-interface ServerFunctions {
-	useTool(tool: Tool, input: Enum.UserInputType): boolean | undefined | void
-
-	canShoot(tool: Tool): boolean
-}
+interface ServerFunctions {}
 
 // Server -> Client -> Server functions
 // Unsafe
