@@ -53,16 +53,28 @@ export class Tower extends BaseComponent<Attributes, TowerInstance> implements O
 				const enemies = track.getActiveEnemies()
 				const [closestEnemy, distance] = this.findClosestEnemy(enemies)
 
-				const elapsed = os.clock() - this.lastAttack
-				// Attack Cooldown
-				if (elapsed >= this.attributes.attackRate) {
-					// Found an enemy within range
-					if (closestEnemy && distance <= this.attributes.range) {
+				// Found an enemy within range
+				if (closestEnemy && distance <= this.attributes.range) {
+					this.faceEnemy(closestEnemy)
+					// Attack Cooldown
+					const elapsed = os.clock() - this.lastAttack
+					if (elapsed >= this.attributes.attackRate) {
 						this.dealDamage(closestEnemy)
 					}
 				}
 			})
 		)
+	}
+
+	private faceEnemy(enemy: Enemy) {
+		const enemyPos = enemy.instance.GetPivot().Position
+		const towerPos = this.instance.GetPivot().Position
+
+		// Ignore Y so it only rotates horizontally
+		const lookAtPos = new Vector3(enemyPos.X, towerPos.Y, enemyPos.Z)
+
+		// Apply rotation to the tower itself
+		this.instance.PivotTo(CFrame.lookAt(towerPos, lookAtPos))
 	}
 
 	public dealDamage(enemy: Enemy) {
