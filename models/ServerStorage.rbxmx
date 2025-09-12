@@ -19,8 +19,8 @@
       </Properties>
       <Item class="Configuration" referent="2">
         <Properties>
-          <string name="Name">Buyable</string>
-          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yDxRszD0I1SE/RwAcPwgAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIMAAAAbW9uZXlfZG9sbGFyBwAAAFZpc2libGUDAQ==</BinaryString>
+          <string name="Name">enemy</string>
+          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yDxiMID9xUEM+k18sPwgAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIRAAAAZW1vamk6bWFsZS16b21iaWUHAAAAVmlzaWJsZQMB</BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
           <int64 name="SourceAssetId">-1</int64>
@@ -29,8 +29,8 @@
       </Item>
       <Item class="Configuration" referent="3">
         <Properties>
-          <string name="Name">Explodable</string>
-          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD2eazT6VjIo+J+rfPQgAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIEAAAAYm9tYgcAAABWaXNpYmxlAwE=</BinaryString>
+          <string name="Name">tower</string>
+          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD7fiAD7g398+gtK9PggAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIRAAAAZW1vamk6cG9zdC1vZmZpY2UHAAAAVmlzaWJsZQMB</BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
           <int64 name="SourceAssetId">-1</int64>
@@ -39,8 +39,8 @@
       </Item>
       <Item class="Configuration" referent="4">
         <Properties>
-          <string name="Name">Hit Detector</string>
-          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD+m8RT9/3gI/EwKWPggAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIIAAAAYXJyb3dfaW4HAAAAVmlzaWJsZQMB</BinaryString>
+          <string name="Name">track</string>
+          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD56dHT/Suxg+ayqYPggAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIPAAAAZW1vamk6d29ybGQtbWFwBwAAAFZpc2libGUDAQ==</BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
           <int64 name="SourceAssetId">-1</int64>

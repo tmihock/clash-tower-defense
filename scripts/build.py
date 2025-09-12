@@ -1,3 +1,4 @@
+# TODO: Fix StarterPlayerScripts from duplicating
 import os
 import subprocess
 import sys
@@ -18,8 +19,6 @@ def main():
 		# Save models to .rbxmx files
 		subprocess.run(["lune", "run", save_models], check=True)
 		print("Models saved to folder.")
-
-		# Fix error from rojo version or some shit
 	
 		# Run rojo build
 		subprocess.run(["rojo", "build", "-o", "build.rbxlx", "default.project.json"], check=True)
