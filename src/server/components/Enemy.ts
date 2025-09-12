@@ -17,7 +17,14 @@ type Attributes = EnemyInfo & {
 @Component({
 	tag: TAG_ENEMY,
 	predicate: instance => Flamework.createGuard<EnemyName>()(instance.Name),
-	ancestorWhitelist: [Workspace]
+	ancestorWhitelist: [Workspace],
+	defaults: {
+		// Default here or instance requires them to be already made
+		health: -1,
+		damage: -1,
+		speed: -1,
+		timeSpawned: -1
+	}
 })
 export class Enemy extends BaseComponent<Attributes, EnemyInstance> implements OnStart {
 	private enemyType = this.instance.Name as never as EnemyName
@@ -47,10 +54,10 @@ export class Enemy extends BaseComponent<Attributes, EnemyInstance> implements O
 		// Target orientation (facing movement direction)
 		const target = CFrame.lookAt(pos, pos.add(lookDir.Unit))
 
-		// Blend between current and target
-		// Adjust the "0.1" to control turn speed (closer to 1 = faster snap)
-		const smoothed = current.Lerp(target, 0.1)
+		// Adjust the alpha to control turn speed (closer to 1 = faster snap)
+		const alpha = 0.1
 
+		const smoothed = current.Lerp(target, alpha)
 		this.instance.PivotTo(smoothed)
 	}
 

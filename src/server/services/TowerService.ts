@@ -5,9 +5,7 @@ import { Components } from "@flamework/components"
 import { Track } from "server/components/Track"
 import { Tower } from "server/components/Tower"
 
-const towerFolder = ReplicatedStorage.Assets.TowerFolder as never as Folder & {
-	[K in TowerName]: Model
-}
+const towerFolder = ReplicatedStorage.Assets.Towers
 
 @Service({})
 export class TowerService implements OnStart {

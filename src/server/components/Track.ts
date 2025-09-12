@@ -6,6 +6,7 @@ import { Enemy } from "./Enemy"
 import { FolderWith } from "shared/types"
 import { GameService } from "server/services/GameService"
 import { Tower } from "./Tower"
+import { $print } from "rbxts-transform-debug"
 
 type NumberString = `${number}`
 
@@ -17,30 +18,25 @@ interface TrackInstance extends Instance {
 
 interface Attributes {}
 
-export function getPositionOnPath(waypoints: Vector3[], speed: number, t: number): Vector3 {
+function getPositionOnPath(waypoints: Vector3[], speed: number, t: number): Vector3 {
 	const d = speed * t // total distance traveled
 
-	// Precompute segment lengths
-	const lengths = table.create<number>(waypoints.size())
-	for (let i = 0; i < waypoints.size() - 1; i++) {
-		lengths.push(waypoints[i + 1].sub(waypoints[i]).Magnitude)
-	}
-
-	// Walk along the path
 	let distAccum = 0
-	for (let i = 0; i < lengths.size(); i++) {
-		const L = lengths[i]
+	for (let i = 0; i < waypoints.size() - 1; i++) {
+		const a = waypoints[i] // current
+		const b = waypoints[i + 1] // next
+		const L = b.sub(a).Magnitude // length
+
 		if (d <= distAccum + L) {
 			const segDist = d - distAccum
 			const alpha = segDist / L
-
-			// interpolate between waypoints[i] and waypoints[i+1]
-			return waypoints[i].Lerp(waypoints[i + 1], alpha)
+			return a.Lerp(b, alpha)
 		}
+
 		distAccum += L
 	}
 
-	// If we've gone past the end, clamp to the final waypoint
+	// Clamp to the last waypoint if we've passed the end
 	return waypoints[waypoints.size() - 1]
 }
 
@@ -84,27 +80,23 @@ export class Track extends BaseComponent<Attributes, TrackInstance> implements O
 		enemy.attributes.timeSpawned = os.clock()
 		enemy.destroying.Once(() => {
 			this.activeEnemies.delete(enemy)
+			this.travelConnections.get(enemy)!.Disconnect()
 			this.travelConnections.delete(enemy)
 		})
-
+		print(this.waypoints)
 		this.travelConnections.set(
 			enemy,
-			RunService.PreRender.Connect(() => this.incrementEnemyPosition(enemy))
+			RunService.Heartbeat.Connect(dt => this.incrementEnemyPosition(enemy, dt))
 		)
 	}
 
-	private incrementEnemyPosition(enemy: Enemy) {
+	private incrementEnemyPosition(enemy: Enemy, dt: number) {
 		const { speed, timeSpawned } = enemy.attributes
 		const elapsed = os.clock() - timeSpawned
-
 		const pos = getPositionOnPath(this.waypoints, speed, elapsed)
 
 		// Approximate movement direction using a small time step
-		const futurePos = getPositionOnPath(
-			this.waypoints,
-			speed,
-			elapsed + RunService.Heartbeat.Wait()[0]
-		)
+		const futurePos = getPositionOnPath(this.waypoints, speed, elapsed + dt)
 		const dir = futurePos.sub(pos)
 
 		enemy.moveTo(pos, dir)

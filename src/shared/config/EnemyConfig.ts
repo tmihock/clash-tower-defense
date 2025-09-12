@@ -8,12 +8,12 @@ export const EnemyConfig = {
 	Skeleton: {
 		health: 1,
 		damage: 1,
-		speed: 1
+		speed: 5
 	},
 	Armored_Skeleton: {
 		health: 3,
 		damage: 1,
-		speed: 1
+		speed: 5
 	}
 } satisfies Record<string, EnemyInfo>
 
