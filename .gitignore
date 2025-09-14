@@ -6,3 +6,5 @@
 *.rbxl.lock
 
 flamework.build
+
+.DS_Store
