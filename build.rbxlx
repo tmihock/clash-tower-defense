@@ -104917,22 +104917,20 @@ do
 	function Tower:onStart()
 		local tracks = Flamework.resolveDependency("$c:components@Components"):getAllComponents("server/components/Track@Track")
 		local _arg0 = #tracks == 1
-		local _arg1 = `{"[src/server/components/Tower.ts:45]"} {"tracks.size() === 1"}: {`{#tracks} track components exist. If amount is 0, a tower is being placed without a track being created.`}`
+		local _arg1 = `{"[src/server/components/Tower.ts:52]"} {"tracks.size() === 1"}: {`{#tracks} track components exist. If amount is 0, a tower is being placed without a track being created.`}`
 		assert(_arg0, _arg1)
 		local track = tracks[1]
 		self.maid:GiveTask(RunService.PreSimulation:Connect(function()
 			--Find closest enemy and face it
 			local enemies = track:getActiveEnemies()
-			local _binding = self:findClosestEnemy(enemies)
-			local closestEnemy = _binding[1]
-			local distance = _binding[2]
+			local targetEnemy = self:findEnemy(self.attributes.targetMode, enemies)
 			-- Found an enemy within range
-			if closestEnemy and distance <= self.attributes.range then
-				self:faceEnemy(closestEnemy)
+			if targetEnemy then
+				self:faceEnemy(targetEnemy)
 				-- Attack Cooldown
 				local elapsed = os.clock() - self.lastAttack
 				if elapsed >= self.attributes.attackRate then
-					self:dealDamage(closestEnemy)
+					self:dealDamage(targetEnemy)
 				end
 			end
 		end))
@@ -104954,29 +104952,85 @@ do
 		self.maid:DoCleaning()
 		super.destroy(self)
 	end
-	function Tower:findClosestEnemy(enemies)
-		local towerPosition = self.instance:GetPivot().Position
-		local closest
-		local closestDistance = math.huge
-		-- ▼ ReadonlySet.forEach ▼
-		local _callback = function(enemy)
-			-- Ensure enemy is valid
-			if not enemy.instance or not enemy.instance.Parent then
+	function Tower:findEnemy(targetMode, enemies)
+		-- ▼ ReadonlySet.size ▼
+		local _size = 0
+		for _ in enemies do
+			_size += 1
+		end
+		-- ▲ ReadonlySet.size ▲
+		if _size == 0 then
+			return nil
+		end
+		if targetMode == "Closest" then
+			local towerPosition = self.instance:GetPivot().Position
+			local closestEnemy
+			local closestDistance = self.attributes.range
+			-- ▼ ReadonlySet.forEach ▼
+			local _callback = function(enemy)
+				-- Ensure enemy is valid
+				if not enemy.instance or not enemy.instance.Parent then
+					return nil
+				end
+				-- GetPivot works on Models (returns CFrame of the root)
+				local enemyPosition = enemy.instance:GetPivot().Position
+				local distance = (towerPosition - enemyPosition).Magnitude
+				if distance < closestDistance then
+					closestEnemy = enemy
+					closestDistance = distance
+				end
+			end
+			for _v in enemies do
+				_callback(_v, _v, enemies)
+			end
+			-- ▲ ReadonlySet.forEach ▲
+			return closestEnemy
+		else
+			local towerPos = self.instance:GetPivot().Position
+			local _array = {}
+			local _length = #_array
+			for _v in enemies do
+				_length += 1
+				_array[_length] = _v
+			end
+			-- ▼ ReadonlyArray.filter ▼
+			local _newValue = {}
+			local _callback = function(enemy)
+				local enemyPos = enemy.instance:GetPivot().Position
+				return (towerPos - enemyPos).Magnitude <= self.attributes.range
+			end
+			local _length_1 = 0
+			for _k, _v in _array do
+				if _callback(_v, _k - 1, _array) == true then
+					_length_1 += 1
+					_newValue[_length_1] = _v
+				end
+			end
+			-- ▲ ReadonlyArray.filter ▲
+			local enemiesInRange = _newValue
+			if #enemiesInRange == 0 then
 				return nil
 			end
-			-- GetPivot works on Models (returns CFrame of the root)
-			local enemyPosition = enemy.instance:GetPivot().Position
-			local distance = (towerPosition - enemyPosition).Magnitude
-			if distance < closestDistance then
-				closest = enemy
-				closestDistance = distance
+			-- Pick the enemy with maximum progress (furthest along path)
+			local _arg1 = enemiesInRange[1]
+			-- ▼ ReadonlyArray.reduce ▼
+			local _result = _arg1
+			local _callback_1 = function(best, enemy)
+				local enemyProgress = os.clock() - enemy.attributes.timeSpawned
+				local bestProgress = os.clock() - best.attributes.timeSpawned
+				if targetMode == "First" then
+					return if enemyProgress > bestProgress then enemy else best
+				else
+					-- must be "Last"
+					return if enemyProgress < bestProgress then enemy else best
+				end
 			end
+			for _i = 1, #enemiesInRange do
+				_result = _callback_1(_result, enemiesInRange[_i], _i - 1, enemiesInRange)
+			end
+			-- ▲ ReadonlyArray.reduce ▲
+			return _result
 		end
-		for _v in enemies do
-			_callback(_v, _v, enemies)
-		end
-		-- ▲ ReadonlySet.forEach ▲
-		return { closest, closestDistance }
 	end
 	do
 		-- (Flamework) Tower metadata
@@ -104993,12 +105047,17 @@ Reflect.decorate(Tower, "$c:components@Component", Component, { {
 	ancestorWhitelist = { Workspace },
 	defaults = {
 		damageDealt = 0,
+		damage = 0,
+		attackRate = 0,
+		range = 0,
+		targetMode = "First",
 	},
 	attributes = {
 		damage = t.number,
 		attackRate = t.number,
 		range = t.number,
 		damageDealt = t.number,
+		targetMode = t.literalList({ "First", "Last", "Closest" }),
 	},
 	instanceGuard = t.intersection(t.instanceIsA("PVInstance"), t.children({
 		hitbox = t.instanceIsA("PVInstance"),
@@ -105107,7 +105166,6 @@ do
 			local _enemy_2 = enemy
 			_travelConnections_1[_enemy_2] = nil
 		end)
-		print(self.waypoints)
 		local _travelConnections = self.travelConnections
 		local _enemy = enemy
 		local _arg1 = RunService.Heartbeat:Connect(function(dt)
@@ -105147,8 +105205,8 @@ Reflect.decorate(Track, "$c:components@Component", Component, { {
 	attributes = {},
 	instanceGuard = t_1.intersection(t_1.instanceIsA("Instance"), t_1.children({
 		waypoints = t_1.instanceIsA("Folder"),
+		path = t_1.instanceIsA("Folder"),
 		enemies = t_1.instanceIsA("Folder"),
-		towers = t_1.instanceIsA("Folder"),
 	})),
 } })
 return {
@@ -105183,6 +105241,7 @@ print("[src/server/main.server.ts:9]", "Flamework server ignited!")
           <string name="Name">networking</string>
           <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local t = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out", "prelude").t
 local _networking = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "networking")
 local GlobalEvents = _networking.GlobalEvents
 local GlobalFunctions = _networking.GlobalFunctions
@@ -105196,8 +105255,10 @@ local Events = GlobalEvents:createServer({}, {
 	namespaces = {},
 })
 local Functions = GlobalFunctions:createServer({}, {
-	incomingIds = {},
-	incoming = {},
+	incomingIds = { "placeTower" },
+	incoming = {
+		placeTower = { { t.Vector3, t.literal("Barbarian") }, nil },
+	},
 	outgoingIds = {},
 	outgoing = {},
 	namespaceIds = {},
@@ -105555,12 +105616,14 @@ do
 	end
 	function EnemyService:onStart()
 		task.wait(3)
+		for i = 1, 100 do
+			task.wait(0.5)
+			self:spawnEnemy("Skeleton")
+		end
+	end
+	function EnemyService:spawnEnemy(enemy)
 		local Components = Flamework.resolveDependency("$c:components@Components")
 		local track = Components:getAllComponents("server/components/Track@Track")[1]
-		self:spawnEnemy(track, "Skeleton")
-	end
-	function EnemyService:spawnEnemy(track, enemy)
-		local Components = Flamework.resolveDependency("$c:components@Components")
 		local newEnemy = enemyFolder[enemy]:Clone()
 		newEnemy.Parent = track.instance.enemies
 		local enemyComponent = Components:getComponent(newEnemy, "server/components/Enemy@Enemy")
@@ -105639,6 +105702,115 @@ return {
         </Item>
         <Item class="ModuleScript" referent="797">
           <Properties>
+            <string name="Name">InventoryService</string>
+            <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Service = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Service
+local t = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "t", "lib", "ts").t
+local SAVE_KEY = "inventory"
+local tHasInventory = t.interface({
+	inventory = t.interface({
+		unlockedTowers = t.array(t.literal("Barbarian")),
+	}),
+})
+local defaultUnlocks = { "Barbarian" }
+local InventoryService
+do
+	InventoryService = setmetatable({}, {
+		__tostring = function()
+			return "InventoryService"
+		end,
+	})
+	InventoryService.__index = InventoryService
+	function InventoryService.new(...)
+		local self = setmetatable({}, InventoryService)
+		return self:constructor(...) or self
+	end
+	function InventoryService:constructor()
+		self.playerUnlockedTowers = {}
+	end
+	function InventoryService:hasTower(player, tower)
+		local _playerUnlockedTowers = self.playerUnlockedTowers
+		local _player = player
+		local _exp = _playerUnlockedTowers[_player]
+		local _tower = tower
+		return _exp[_tower] ~= nil
+	end
+	function InventoryService:giveTower(player, tower)
+		local _playerUnlockedTowers = self.playerUnlockedTowers
+		local _player = player
+		local _exp = _playerUnlockedTowers[_player]
+		local _tower = tower
+		_exp[_tower] = true
+	end
+	function InventoryService:removeTower(player, tower)
+		local _playerUnlockedTowers = self.playerUnlockedTowers
+		local _player = player
+		local _exp = _playerUnlockedTowers[_player]
+		local _tower = tower
+		_exp[_tower] = nil
+	end
+	function InventoryService:onDataLoad(player, data)
+		if tHasInventory(data) then
+			local _playerUnlockedTowers = self.playerUnlockedTowers
+			local _exp = player
+			local _set = {}
+			for _, _v in data[SAVE_KEY].unlockedTowers do
+				_set[_v] = true
+			end
+			_playerUnlockedTowers[_exp] = _set
+		else
+			local _playerUnlockedTowers = self.playerUnlockedTowers
+			local _exp = player
+			local _set = {}
+			for _, _v in table.clone(defaultUnlocks) do
+				_set[_v] = true
+			end
+			_playerUnlockedTowers[_exp] = _set
+		end
+	end
+	function InventoryService:onDataSave(player)
+		local _object = {}
+		local _left = "unlockedTowers"
+		local _array = {}
+		local _length = #_array
+		local _playerUnlockedTowers = self.playerUnlockedTowers
+		local _player = player
+		local _condition = _playerUnlockedTowers[_player]
+		if _condition == nil then
+			_condition = {}
+		end
+		for _v in _condition do
+			_length += 1
+			_array[_length] = _v
+		end
+		_object[_left] = _array
+		local inventory = _object
+		local _playerUnlockedTowers_1 = self.playerUnlockedTowers
+		local _player_1 = player
+		_playerUnlockedTowers_1[_player_1] = nil
+		return {
+			key = SAVE_KEY,
+			value = inventory,
+		}
+	end
+	do
+		-- (Flamework) InventoryService metadata
+		Reflect.defineMetadata(InventoryService, "identifier", "server/services/InventoryService@InventoryService")
+		Reflect.defineMetadata(InventoryService, "flamework:implements", { "server/services/DataService@DataIO" })
+	end
+end
+-- (Flamework) InventoryService decorators
+Reflect.decorate(InventoryService, "$:flamework@Service", Service, { {} })
+return {
+	InventoryService = InventoryService,
+}
+]]></string>
+          </Properties>
+        </Item>
+        <Item class="ModuleScript" referent="798">
+          <Properties>
             <string name="Name">MapService</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
@@ -105679,7 +105851,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="798">
+        <Item class="ModuleScript" referent="799">
           <Properties>
             <string name="Name">MoneyService</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -105798,7 +105970,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="799">
+        <Item class="ModuleScript" referent="800">
           <Properties>
             <string name="Name">PlayerService</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -105953,7 +106125,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="800">
+        <Item class="ModuleScript" referent="801">
           <Properties>
             <string name="Name">SpawnService</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -105996,7 +106168,7 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="801">
+        <Item class="ModuleScript" referent="802">
           <Properties>
             <string name="Name">TowerService</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -106005,7 +106177,10 @@ local _core = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_inc
 local Reflect = _core.Reflect
 local Flamework = _core.Flamework
 local Service = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Service
-local ReplicatedStorage = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services").ReplicatedStorage
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local ReplicatedStorage = _services.ReplicatedStorage
+local Workspace = _services.Workspace
+local Functions = TS.import(script, game:GetService("ServerScriptService"), "TS", "networking").Functions
 local towerFolder = ReplicatedStorage.Assets.Towers
 local TowerService
 do
@@ -106019,15 +106194,48 @@ do
 		local self = setmetatable({}, TowerService)
 		return self:constructor(...) or self
 	end
-	function TowerService:constructor()
+	function TowerService:constructor(inventoryService)
+		self.inventoryService = inventoryService
 	end
 	function TowerService:onStart()
+		task.wait(1)
+		self:spawnTower(Workspace.tPos.Position, "Barbarian")
+		Functions.placeTower:setCallback(function(p, po, t)
+			return self:onPlaceTower(p, po, t)
+		end)
 	end
-	function TowerService:spawnTower(track, pos, tower)
+	function TowerService:onPlaceTower(player, pos, tower)
+		if self:canPlace(player, pos, tower) then
+			self:spawnTower(pos, tower)
+			return true
+		else
+			return false
+		end
+	end
+	function TowerService:canPlace(player, pos, tower)
+		return self:posNotOnTrackOrTower(pos, tower) and self.inventoryService:hasTower(player, tower)
+	end
+	function TowerService:posNotOnTrackOrTower(pos, tower)
+		local track = Flamework.resolveDependency("$c:components@Components"):getAllComponents("server/components/Track@Track")[1]
+		local path = track.instance.path
+		local _binding = towerFolder[tower].hitbox.Size
+		local X = _binding.X
+		local Z = _binding.Z
+		local towerSize = Vector3.new(X, 1000, Z)
+		local overlapParams = OverlapParams.new()
+		overlapParams.FilterType = Enum.RaycastFilterType.Include
+		overlapParams.FilterDescendantsInstances = { path, Workspace.Towers }
+		-- Query physics: does this box overlap any track parts?
+		local hits = Workspace:GetPartBoundsInBox(CFrame.new(pos), towerSize, overlapParams)
+		-- If we got any hits → tower is on the track
+		return #hits == 0
+	end
+	function TowerService:spawnTower(pos, tower)
 		local Components = Flamework.resolveDependency("$c:components@Components")
+		local track = Components:getAllComponents("server/components/Track@Track")[1]
 		local newTower = towerFolder[tower]:Clone()
 		newTower:PivotTo(CFrame.new(pos))
-		newTower.Parent = track.instance.towers
+		newTower.Parent = Workspace.Towers
 		local towerComponent = Components:getComponent(newTower, "server/components/Tower@Tower")
 		local _arg1 = `Component for "{newTower:GetFullName()}" not found.`
 		assert(towerComponent, _arg1)
@@ -106036,6 +106244,7 @@ do
 	do
 		-- (Flamework) TowerService metadata
 		Reflect.defineMetadata(TowerService, "identifier", "server/services/TowerService@TowerService")
+		Reflect.defineMetadata(TowerService, "flamework:parameters", { "server/services/InventoryService@InventoryService" })
 		Reflect.defineMetadata(TowerService, "flamework:implements", { "$:flamework@OnStart" })
 	end
 end
@@ -106050,7 +106259,7 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="ServerStorage" referent="802">
+  <Item class="ServerStorage" referent="803">
     <Properties>
       <string name="Name">ServerStorage</string>
       <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106059,7 +106268,7 @@ return {
       <int64 name="SourceAssetId">-1</int64>
       <BinaryString name="Tags"></BinaryString>
     </Properties>
-    <Item class="Folder" referent="803">
+    <Item class="Folder" referent="804">
       <Properties>
         <string name="Name">TagList</string>
         <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106068,7 +106277,7 @@ return {
         <int64 name="SourceAssetId">-1</int64>
         <BinaryString name="Tags">VGFnRWRpdG9yVGFnQ29udGFpbmVy</BinaryString>
       </Properties>
-      <Item class="Configuration" referent="804">
+      <Item class="Configuration" referent="805">
         <Properties>
           <string name="Name">enemy</string>
           <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yDxiMID9xUEM+k18sPwgAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIRAAAAZW1vamk6bWFsZS16b21iaWUHAAAAVmlzaWJsZQMB</BinaryString>
@@ -106078,7 +106287,7 @@ return {
           <BinaryString name="Tags"></BinaryString>
         </Properties>
       </Item>
-      <Item class="Configuration" referent="805">
+      <Item class="Configuration" referent="806">
         <Properties>
           <string name="Name">tower</string>
           <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD7fiAD7g398+gtK9PggAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIRAAAAZW1vamk6cG9zdC1vZmZpY2UHAAAAVmlzaWJsZQMB</BinaryString>
@@ -106088,7 +106297,7 @@ return {
           <BinaryString name="Tags"></BinaryString>
         </Properties>
       </Item>
-      <Item class="Configuration" referent="806">
+      <Item class="Configuration" referent="807">
         <Properties>
           <string name="Name">track</string>
           <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD56dHT/Suxg+ayqYPggAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIPAAAAZW1vamk6d29ybGQtbWFwBwAAAFZpc2libGUDAQ==</BinaryString>
@@ -106100,13 +106309,13 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="SoundService" referent="807">
+  <Item class="SoundService" referent="808">
     <Properties>
       <string name="Name">SoundService</string>
       <bool name="RespectFilteringEnabled">true</bool>
     </Properties>
   </Item>
-  <Item class="StarterGui" referent="808">
+  <Item class="StarterGui" referent="809">
     <Properties>
       <string name="Name">StarterGui</string>
       <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106123,7 +106332,7 @@ return {
       <token name="VirtualCursorMode">0</token>
     </Properties>
   </Item>
-  <Item class="StarterPlayer" referent="809">
+  <Item class="StarterPlayer" referent="810">
     <Properties>
       <string name="Name">StarterPlayer</string>
       <bool name="AllowCustomAnimations">true</bool>
@@ -106175,7 +106384,7 @@ return {
       <BinaryString name="Tags"></BinaryString>
       <bool name="UserEmotesEnabled">true</bool>
     </Properties>
-    <Item class="StarterPlayerScripts" referent="810">
+    <Item class="StarterPlayerScripts" referent="811">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
         <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106184,7 +106393,7 @@ return {
         <int64 name="SourceAssetId">-1</int64>
         <BinaryString name="Tags"></BinaryString>
       </Properties>
-      <Item class="Folder" referent="811">
+      <Item class="Folder" referent="812">
         <Properties>
           <string name="Name">TS</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106193,7 +106402,7 @@ return {
           <int64 name="SourceAssetId">-1</int64>
           <BinaryString name="Tags"></BinaryString>
         </Properties>
-        <Item class="Folder" referent="812">
+        <Item class="Folder" referent="813">
           <Properties>
             <string name="Name">components</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106203,7 +106412,7 @@ return {
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="Folder" referent="813">
+        <Item class="Folder" referent="814">
           <Properties>
             <string name="Name">controllers</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106212,7 +106421,7 @@ return {
             <int64 name="SourceAssetId">-1</int64>
             <BinaryString name="Tags"></BinaryString>
           </Properties>
-          <Item class="ModuleScript" referent="814">
+          <Item class="ModuleScript" referent="815">
             <Properties>
               <string name="Name">TowerController</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106226,6 +106435,17 @@ return {
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
 local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
 local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local Players = _services.Players
+local ReplicatedStorage = _services.ReplicatedStorage
+local RunService = _services.RunService
+local UserInputService = _services.UserInputService
+local Workspace = _services.Workspace
+local Functions = TS.import(script, script.Parent.Parent, "networking").Functions
+local Player = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local towerFolder = ReplicatedStorage.Assets.Towers
+local makePartPreview
 local TowerController
 do
 	TowerController = setmetatable({}, {
@@ -106239,10 +106459,117 @@ do
 		return self:constructor(...) or self
 	end
 	function TowerController:constructor()
+		self.isPlacing = false
+		self.selectedTower = "Barbarian"
 	end
 	function TowerController:onStart()
+		UserInputService.InputBegan:Connect(function(input, gpe)
+			if gpe then
+				return nil
+			end
+			if input.KeyCode == Enum.KeyCode.E then
+				self:togglePlacing()
+			end
+			if input.UserInputType == Enum.UserInputType.MouseButton1 and self.isPlacing then
+				self:confirmPlacement()
+			end
+		end)
+	end
+	function TowerController:stopPlacing()
+		self.isPlacing = false
+		local _result = self.previewModel
+		if _result ~= nil then
+			_result:Destroy()
+		end
 	end
 	function TowerController:startPlacing()
+		local _arg0 = not self.isPlacing
+		local _arg1 = `{"[src/client/controllers/TowerController.ts:42]"} {"!this.isPlacing"}: {"Player is already placing"}`
+		assert(_arg0, _arg1)
+		self.isPlacing = true
+		local preview = towerFolder[self.selectedTower]:Clone()
+		self.previewModel = preview
+		preview.Parent = Workspace
+		local _exp = preview:GetDescendants()
+		-- ▼ ReadonlyArray.filter ▼
+		local _newValue = {}
+		local _callback = function(i)
+			return i:IsA("BasePart")
+		end
+		local _length = 0
+		for _k, _v in _exp do
+			if _callback(_v, _k - 1, _exp) == true then
+				_length += 1
+				_newValue[_length] = _v
+			end
+		end
+		-- ▲ ReadonlyArray.filter ▲
+		for _k, _v in _newValue do
+			makePartPreview(_v, _k - 1, _newValue)
+		end
+		self.mouseStepped = RunService.RenderStepped:Connect(function(dt)
+			local pos = self:mouseToTowerPos()
+			if pos then
+				preview:MoveTo(pos)
+			end
+		end)
+	end
+	function TowerController:confirmPlacement()
+		local _isPlacing = self.isPlacing
+		local _arg1 = `{"[src/client/controllers/TowerController.ts:63]"} {"this.isPlacing"}: Assertion failed!`
+		assert(_isPlacing, _arg1)
+		local placementPos = self:mouseToTowerPos()
+		local _arg1_1 = `{"[src/client/controllers/TowerController.ts:65]"} {"placementPos"}: {`this.mouseToTowerPos({self.selectedTower}) returned undefined`}`
+		assert(placementPos, _arg1_1)
+		local _clone = self.previewModel
+		if _clone ~= nil then
+			_clone = _clone:Clone()
+		end
+		local clone = _clone
+		Functions.placeTower:invoke(placementPos, self.selectedTower):andThen(function(wasPlaced)
+			if wasPlaced then
+				local _result = clone
+				if _result ~= nil then
+					_result:Destroy()
+				end
+			else
+				-- Failed, make clone red then destroy or seomthing
+				local _result = clone
+				if _result ~= nil then
+					_result:Destroy()
+				end
+			end
+		end)
+	end
+	function TowerController:mouseToTowerPos()
+		local _binding = UserInputService:GetMouseLocation()
+		local X = _binding.X
+		local Y = _binding.Y
+		local _binding_1 = Camera:ViewportPointToRay(X, Y)
+		local Origin = _binding_1.Origin
+		local Direction = _binding_1.Direction
+		local rayParams = RaycastParams.new()
+		rayParams.FilterType = Enum.RaycastFilterType.Exclude
+		rayParams.FilterDescendantsInstances = { Workspace.Preview, Workspace.Live, Workspace.Towers }
+		local rayResult = Workspace:Raycast(Origin, Direction * 1000, rayParams)
+		if rayResult then
+			local _binding_2 = rayResult.Position
+			local X = _binding_2.X
+			local Z = _binding_2.Z
+			local Y = rayResult.Position.Y + towerFolder[self.selectedTower].hitbox.Size.Y / 2
+			return Vector3.new(X, Y, Z)
+		end
+	end
+	function TowerController:togglePlacing(toggle)
+		if toggle == nil then
+			toggle = not self.isPlacing
+		end
+		if self.isPlacing then
+			self:stopPlacing()
+		else
+			self:startPlacing()
+		end
+		return self.isPlacing
 	end
 	do
 		-- (Flamework) TowerController metadata
@@ -106252,6 +106579,11 @@ do
 end
 -- (Flamework) TowerController decorators
 Reflect.decorate(TowerController, "$:flamework@Controller", Controller, { {} })
+function makePartPreview(part)
+	part.Transparency = 0.5
+	part.CanCollide = false
+	part.CanQuery = false
+end
 return {
 	TowerController = TowerController,
 }
@@ -106261,7 +106593,7 @@ return {
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="815">
+        <Item class="LocalScript" referent="816">
           <Properties>
             <string name="Name">main</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106286,7 +106618,7 @@ print("[src/client/main.client.ts:9]", "Flamework client ignited!")
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="816">
+        <Item class="LocalScript" referent="817">
           <Properties>
             <string name="Name">setCore</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106304,7 +106636,7 @@ print("[src/client/main.client.ts:9]", "Flamework client ignited!")
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="817">
+        <Item class="ModuleScript" referent="818">
           <Properties>
             <string name="Name">networking</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106316,6 +106648,7 @@ print("[src/client/main.client.ts:9]", "Flamework client ignited!")
             <bool name="DefinesCapabilities">false</bool>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local t = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out", "prelude").t
 local _networking = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "networking")
 local GlobalEvents = _networking.GlobalEvents
 local GlobalFunctions = _networking.GlobalFunctions
@@ -106331,8 +106664,10 @@ local Events = GlobalEvents:createClient({}, {
 local Functions = GlobalFunctions:createClient({}, {
 	incomingIds = {},
 	incoming = {},
-	outgoingIds = {},
-	outgoing = {},
+	outgoingIds = { "placeTower" },
+	outgoing = {
+		placeTower = t.boolean,
+	},
 	namespaceIds = {},
 	namespaces = {},
 })
@@ -106345,7 +106680,7 @@ return {
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="Folder" referent="818">
+        <Item class="Folder" referent="819">
           <Properties>
             <string name="Name">classes</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106355,7 +106690,7 @@ return {
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="Folder" referent="819">
+        <Item class="Folder" referent="820">
           <Properties>
             <string name="Name">ui</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106366,7 +106701,7 @@ return {
           </Properties>
         </Item>
       </Item>
-      <Item class="LocalScript" referent="820">
+      <Item class="LocalScript" referent="821">
         <Properties>
           <string name="Name">RbxCharacterSounds</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -106820,7 +107155,7 @@ Players.PlayerRemoving:Connect(playerRemoving)
           <int64 name="SourceAssetId">-1</int64>
           <BinaryString name="Tags"></BinaryString>
         </Properties>
-        <Item class="ModuleScript" referent="821">
+        <Item class="ModuleScript" referent="822">
           <Properties>
             <string name="Name">AtomicBinding</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107113,7 +107448,7 @@ return AtomicBinding
         </Item>
       </Item>
     </Item>
-    <Item class="StarterCharacterScripts" referent="822">
+    <Item class="StarterCharacterScripts" referent="823">
       <Properties>
         <string name="Name">StarterCharacterScripts</string>
         <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107123,35 +107458,46 @@ return AtomicBinding
         <BinaryString name="Tags"></BinaryString>
       </Properties>
     </Item>
-    <Item class="StarterPlayerScripts" referent="823">
+    <Item class="StarterPlayerScripts" referent="824">
       <Properties>
         <string name="Name">StarterPlayerScripts</string>
       </Properties>
-      <Item class="Folder" referent="824">
+      <Item class="Folder" referent="825">
         <Properties>
           <string name="Name">TS</string>
         </Properties>
-        <Item class="Folder" referent="825">
+        <Item class="Folder" referent="826">
           <Properties>
             <string name="Name">classes</string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="826">
+        <Item class="Folder" referent="827">
           <Properties>
             <string name="Name">components</string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="827">
+        <Item class="Folder" referent="828">
           <Properties>
             <string name="Name">controllers</string>
           </Properties>
-          <Item class="ModuleScript" referent="828">
+          <Item class="ModuleScript" referent="829">
             <Properties>
               <string name="Name">TowerController</string>
               <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
 local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
 local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local Players = _services.Players
+local ReplicatedStorage = _services.ReplicatedStorage
+local RunService = _services.RunService
+local UserInputService = _services.UserInputService
+local Workspace = _services.Workspace
+local Functions = TS.import(script, script.Parent.Parent, "networking").Functions
+local Player = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local towerFolder = ReplicatedStorage.Assets.Towers
+local makePartPreview
 local TowerController
 do
 	TowerController = setmetatable({}, {
@@ -107165,10 +107511,117 @@ do
 		return self:constructor(...) or self
 	end
 	function TowerController:constructor()
+		self.isPlacing = false
+		self.selectedTower = "Barbarian"
 	end
 	function TowerController:onStart()
+		UserInputService.InputBegan:Connect(function(input, gpe)
+			if gpe then
+				return nil
+			end
+			if input.KeyCode == Enum.KeyCode.E then
+				self:togglePlacing()
+			end
+			if input.UserInputType == Enum.UserInputType.MouseButton1 and self.isPlacing then
+				self:confirmPlacement()
+			end
+		end)
+	end
+	function TowerController:stopPlacing()
+		self.isPlacing = false
+		local _result = self.previewModel
+		if _result ~= nil then
+			_result:Destroy()
+		end
 	end
 	function TowerController:startPlacing()
+		local _arg0 = not self.isPlacing
+		local _arg1 = `{"[src/client/controllers/TowerController.ts:42]"} {"!this.isPlacing"}: {"Player is already placing"}`
+		assert(_arg0, _arg1)
+		self.isPlacing = true
+		local preview = towerFolder[self.selectedTower]:Clone()
+		self.previewModel = preview
+		preview.Parent = Workspace
+		local _exp = preview:GetDescendants()
+		-- ▼ ReadonlyArray.filter ▼
+		local _newValue = {}
+		local _callback = function(i)
+			return i:IsA("BasePart")
+		end
+		local _length = 0
+		for _k, _v in _exp do
+			if _callback(_v, _k - 1, _exp) == true then
+				_length += 1
+				_newValue[_length] = _v
+			end
+		end
+		-- ▲ ReadonlyArray.filter ▲
+		for _k, _v in _newValue do
+			makePartPreview(_v, _k - 1, _newValue)
+		end
+		self.mouseStepped = RunService.RenderStepped:Connect(function(dt)
+			local pos = self:mouseToTowerPos()
+			if pos then
+				preview:MoveTo(pos)
+			end
+		end)
+	end
+	function TowerController:confirmPlacement()
+		local _isPlacing = self.isPlacing
+		local _arg1 = `{"[src/client/controllers/TowerController.ts:63]"} {"this.isPlacing"}: Assertion failed!`
+		assert(_isPlacing, _arg1)
+		local placementPos = self:mouseToTowerPos()
+		local _arg1_1 = `{"[src/client/controllers/TowerController.ts:65]"} {"placementPos"}: {`this.mouseToTowerPos({self.selectedTower}) returned undefined`}`
+		assert(placementPos, _arg1_1)
+		local _clone = self.previewModel
+		if _clone ~= nil then
+			_clone = _clone:Clone()
+		end
+		local clone = _clone
+		Functions.placeTower:invoke(placementPos, self.selectedTower):andThen(function(wasPlaced)
+			if wasPlaced then
+				local _result = clone
+				if _result ~= nil then
+					_result:Destroy()
+				end
+			else
+				-- Failed, make clone red then destroy or seomthing
+				local _result = clone
+				if _result ~= nil then
+					_result:Destroy()
+				end
+			end
+		end)
+	end
+	function TowerController:mouseToTowerPos()
+		local _binding = UserInputService:GetMouseLocation()
+		local X = _binding.X
+		local Y = _binding.Y
+		local _binding_1 = Camera:ViewportPointToRay(X, Y)
+		local Origin = _binding_1.Origin
+		local Direction = _binding_1.Direction
+		local rayParams = RaycastParams.new()
+		rayParams.FilterType = Enum.RaycastFilterType.Exclude
+		rayParams.FilterDescendantsInstances = { Workspace.Preview, Workspace.Live, Workspace.Towers }
+		local rayResult = Workspace:Raycast(Origin, Direction * 1000, rayParams)
+		if rayResult then
+			local _binding_2 = rayResult.Position
+			local X = _binding_2.X
+			local Z = _binding_2.Z
+			local Y = rayResult.Position.Y + towerFolder[self.selectedTower].hitbox.Size.Y / 2
+			return Vector3.new(X, Y, Z)
+		end
+	end
+	function TowerController:togglePlacing(toggle)
+		if toggle == nil then
+			toggle = not self.isPlacing
+		end
+		if self.isPlacing then
+			self:stopPlacing()
+		else
+			self:startPlacing()
+		end
+		return self.isPlacing
 	end
 	do
 		-- (Flamework) TowerController metadata
@@ -107178,6 +107631,11 @@ do
 end
 -- (Flamework) TowerController decorators
 Reflect.decorate(TowerController, "$:flamework@Controller", Controller, { {} })
+function makePartPreview(part)
+	part.Transparency = 0.5
+	part.CanCollide = false
+	part.CanQuery = false
+end
 return {
 	TowerController = TowerController,
 }
@@ -107185,7 +107643,7 @@ return {
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="829">
+        <Item class="LocalScript" referent="830">
           <Properties>
             <string name="Name">main</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
@@ -107199,11 +107657,12 @@ print("[src/client/main.client.ts:9]", "Flamework client ignited!")
 ]]></string>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="830">
+        <Item class="ModuleScript" referent="831">
           <Properties>
             <string name="Name">networking</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local t = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out", "prelude").t
 local _networking = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "networking")
 local GlobalEvents = _networking.GlobalEvents
 local GlobalFunctions = _networking.GlobalFunctions
@@ -107219,8 +107678,10 @@ local Events = GlobalEvents:createClient({}, {
 local Functions = GlobalFunctions:createClient({}, {
 	incomingIds = {},
 	incoming = {},
-	outgoingIds = {},
-	outgoing = {},
+	outgoingIds = { "placeTower" },
+	outgoing = {
+		placeTower = t.boolean,
+	},
 	namespaceIds = {},
 	namespaces = {},
 })
@@ -107231,14 +107692,14 @@ return {
 ]]></string>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="831">
+        <Item class="LocalScript" referent="832">
           <Properties>
             <string name="Name">setCore</string>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 ]]></string>
           </Properties>
         </Item>
-        <Item class="Folder" referent="832">
+        <Item class="Folder" referent="833">
           <Properties>
             <string name="Name">ui</string>
           </Properties>
@@ -107246,18 +107707,18 @@ return {
       </Item>
     </Item>
   </Item>
-  <Item class="Teams" referent="833">
+  <Item class="Teams" referent="834">
     <Properties>
       <string name="Name">Teams</string>
     </Properties>
   </Item>
-  <Item class="TextChatService" referent="834">
+  <Item class="TextChatService" referent="835">
     <Properties>
       <string name="Name">TextChatService</string>
       <token name="ChatVersion">1</token>
     </Properties>
   </Item>
-  <Item class="Workspace" referent="835">
+  <Item class="Workspace" referent="836">
     <Properties>
       <string name="Name">Workspace</string>
       <float name="AirDensity">0.0012</float>
@@ -107269,7 +107730,7 @@ return {
       <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
       <token name="ClientAnimatorThrottling">0</token>
       <BinaryString name="CollisionGroupData"><![CDATA[AQQABP////8HRGVmYXVsdAEE+////xFDcnVtYmxpbmdQbGF0Zm9ybQIE/f///wRMYXZhAwT/////EFN0dWRpb1NlbGVjdGFibGU=]]></BinaryString>
-      <Ref name="CurrentCamera">836</Ref>
+      <Ref name="CurrentCamera">837</Ref>
       <double name="DistributedGameTime">0</double>
       <bool name="ExplicitAutoJoints">true</bool>
       <bool name="FallHeightEnabled">true</bool>
@@ -107352,7 +107813,7 @@ return {
         </CFrame>
       </OptionalCoordinateFrame>
     </Properties>
-    <Item class="Terrain" referent="837">
+    <Item class="Terrain" referent="838">
       <Properties>
         <string name="Name">Terrain</string>
         <token name="AcquisitionMethod">0</token>
@@ -107465,7 +107926,7 @@ return {
         <float name="WaterWaveSpeed">10</float>
       </Properties>
     </Item>
-    <Item class="Folder" referent="838">
+    <Item class="Folder" referent="839">
       <Properties>
         <string name="Name">Live</string>
         <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107475,7 +107936,7 @@ return {
         <BinaryString name="Tags"></BinaryString>
       </Properties>
     </Item>
-    <Item class="Folder" referent="839">
+    <Item class="Folder" referent="840">
       <Properties>
         <string name="Name">Map</string>
         <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107484,7 +107945,7 @@ return {
         <int64 name="SourceAssetId">-1</int64>
         <BinaryString name="Tags"></BinaryString>
       </Properties>
-      <Item class="Model" referent="840">
+      <Item class="Model" referent="841">
         <Properties>
           <string name="Name">Rig</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107512,7 +107973,7 @@ return {
           </Vector3>
           <token name="ModelStreamingMode">0</token>
           <bool name="NeedsPivotMigration">false</bool>
-          <Ref name="PrimaryPart">841</Ref>
+          <Ref name="PrimaryPart">842</Ref>
           <bool name="DefinesCapabilities">false</bool>
           <float name="ScaleFactor">1</float>
           <int64 name="SourceAssetId">-1</int64>
@@ -107534,7 +107995,7 @@ return {
             </CFrame>
           </OptionalCoordinateFrame>
         </Properties>
-        <Item class="Part" referent="841">
+        <Item class="Part" referent="842">
           <Properties>
             <string name="Name">HumanoidRootPart</string>
             <bool name="Anchored">false</bool>
@@ -107632,7 +108093,7 @@ return {
               <Z>0</Z>
             </Vector3>
           </Properties>
-          <Item class="Attachment" referent="842">
+          <Item class="Attachment" referent="843">
             <Properties>
               <string name="Name">RootRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107656,7 +108117,7 @@ return {
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="843">
+            <Item class="Vector3Value" referent="844">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107672,7 +108133,7 @@ return {
               </Properties>
             </Item>
           </Item>
-          <Item class="Vector3Value" referent="844">
+          <Item class="Vector3Value" referent="845">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107687,7 +108148,7 @@ return {
               </Vector3>
             </Properties>
           </Item>
-          <Item class="Attachment" referent="845">
+          <Item class="Attachment" referent="846">
             <Properties>
               <string name="Name">RootAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107711,7 +108172,7 @@ return {
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="846">
+            <Item class="Vector3Value" referent="847">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107728,7 +108189,7 @@ return {
             </Item>
           </Item>
         </Item>
-        <Item class="Humanoid" referent="847">
+        <Item class="Humanoid" referent="848">
           <Properties>
             <string name="Name">Humanoid</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107765,7 +108226,7 @@ return {
             <bool name="UseJumpPower">true</bool>
             <float name="WalkSpeed">16</float>
           </Properties>
-          <Item class="Animator" referent="848">
+          <Item class="Animator" referent="849">
             <Properties>
               <string name="Name">Animator</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107776,7 +108237,7 @@ return {
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
-          <Item class="NumberValue" referent="849">
+          <Item class="NumberValue" referent="850">
             <Properties>
               <string name="Name">BodyTypeScale</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107787,7 +108248,7 @@ return {
               <double name="Value">0</double>
             </Properties>
           </Item>
-          <Item class="NumberValue" referent="850">
+          <Item class="NumberValue" referent="851">
             <Properties>
               <string name="Name">BodyProportionScale</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107798,7 +108259,7 @@ return {
               <double name="Value">0</double>
             </Properties>
           </Item>
-          <Item class="NumberValue" referent="851">
+          <Item class="NumberValue" referent="852">
             <Properties>
               <string name="Name">BodyWidthScale</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107809,7 +108270,7 @@ return {
               <double name="Value">1</double>
             </Properties>
           </Item>
-          <Item class="NumberValue" referent="852">
+          <Item class="NumberValue" referent="853">
             <Properties>
               <string name="Name">BodyHeightScale</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107820,7 +108281,7 @@ return {
               <double name="Value">1</double>
             </Properties>
           </Item>
-          <Item class="NumberValue" referent="853">
+          <Item class="NumberValue" referent="854">
             <Properties>
               <string name="Name">BodyDepthScale</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107831,7 +108292,7 @@ return {
               <double name="Value">1</double>
             </Properties>
           </Item>
-          <Item class="NumberValue" referent="854">
+          <Item class="NumberValue" referent="855">
             <Properties>
               <string name="Name">HeadScale</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107842,7 +108303,7 @@ return {
               <double name="Value">1</double>
             </Properties>
           </Item>
-          <Item class="HumanoidDescription" referent="855">
+          <Item class="HumanoidDescription" referent="856">
             <Properties>
               <string name="Name">HumanoidDescription</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -107871,7 +108332,7 @@ return {
               <int64 name="WalkAnimation">0</int64>
               <float name="WidthScale">1</float>
             </Properties>
-            <Item class="BodyPartDescription" referent="856">
+            <Item class="BodyPartDescription" referent="857">
               <Properties>
                 <string name="Name">BodyPartDescription</string>
                 <int64 name="AssetId">86498048</int64>
@@ -107889,7 +108350,7 @@ return {
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
             </Item>
-            <Item class="BodyPartDescription" referent="857">
+            <Item class="BodyPartDescription" referent="858">
               <Properties>
                 <string name="Name">BodyPartDescription</string>
                 <int64 name="AssetId">86500054</int64>
@@ -107907,7 +108368,7 @@ return {
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
             </Item>
-            <Item class="BodyPartDescription" referent="858">
+            <Item class="BodyPartDescription" referent="859">
               <Properties>
                 <string name="Name">BodyPartDescription</string>
                 <int64 name="AssetId">86500036</int64>
@@ -107925,7 +108386,7 @@ return {
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
             </Item>
-            <Item class="BodyPartDescription" referent="859">
+            <Item class="BodyPartDescription" referent="860">
               <Properties>
                 <string name="Name">BodyPartDescription</string>
                 <int64 name="AssetId">86500008</int64>
@@ -107943,7 +108404,7 @@ return {
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
             </Item>
-            <Item class="BodyPartDescription" referent="860">
+            <Item class="BodyPartDescription" referent="861">
               <Properties>
                 <string name="Name">BodyPartDescription</string>
                 <int64 name="AssetId">86500064</int64>
@@ -107961,7 +108422,7 @@ return {
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
             </Item>
-            <Item class="BodyPartDescription" referent="861">
+            <Item class="BodyPartDescription" referent="862">
               <Properties>
                 <string name="Name">BodyPartDescription</string>
                 <int64 name="AssetId">86500078</int64>
@@ -107979,7 +108440,7 @@ return {
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
             </Item>
-            <Item class="AccessoryDescription" referent="862">
+            <Item class="AccessoryDescription" referent="863">
               <Properties>
                 <string name="Name">AccessoryDescription</string>
                 <token name="AccessoryType">2</token>
@@ -108012,7 +108473,7 @@ return {
             </Item>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="863">
+        <Item class="LocalScript" referent="864">
           <Properties>
             <string name="Name">Animate</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -108831,7 +109292,7 @@ end
             <int64 name="SourceAssetId">-1</int64>
             <BinaryString name="Tags"></BinaryString>
           </Properties>
-          <Item class="StringValue" referent="864">
+          <Item class="StringValue" referent="865">
             <Properties>
               <string name="Name">cheer</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -108841,7 +109302,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="865">
+            <Item class="Animation" referent="866">
               <Properties>
                 <string name="Name">CheerAnim</string>
                 <ContentId name="AnimationId">
@@ -108855,7 +109316,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="866">
+          <Item class="StringValue" referent="867">
             <Properties>
               <string name="Name">climb</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -108865,7 +109326,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="867">
+            <Item class="Animation" referent="868">
               <Properties>
                 <string name="Name">ClimbAnim</string>
                 <ContentId name="AnimationId">
@@ -108879,7 +109340,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="868">
+          <Item class="StringValue" referent="869">
             <Properties>
               <string name="Name">dance</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -108889,7 +109350,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="869">
+            <Item class="Animation" referent="870">
               <Properties>
                 <string name="Name">Animation1</string>
                 <ContentId name="AnimationId">
@@ -108901,7 +109362,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="870">
+              <Item class="NumberValue" referent="871">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -108913,7 +109374,7 @@ end
                 </Properties>
               </Item>
             </Item>
-            <Item class="Animation" referent="871">
+            <Item class="Animation" referent="872">
               <Properties>
                 <string name="Name">Animation2</string>
                 <ContentId name="AnimationId">
@@ -108925,7 +109386,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="872">
+              <Item class="NumberValue" referent="873">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -108937,7 +109398,7 @@ end
                 </Properties>
               </Item>
             </Item>
-            <Item class="Animation" referent="873">
+            <Item class="Animation" referent="874">
               <Properties>
                 <string name="Name">Animation3</string>
                 <ContentId name="AnimationId">
@@ -108949,7 +109410,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="874">
+              <Item class="NumberValue" referent="875">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -108962,7 +109423,7 @@ end
               </Item>
             </Item>
           </Item>
-          <Item class="StringValue" referent="875">
+          <Item class="StringValue" referent="876">
             <Properties>
               <string name="Name">dance2</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -108972,7 +109433,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="876">
+            <Item class="Animation" referent="877">
               <Properties>
                 <string name="Name">Animation1</string>
                 <ContentId name="AnimationId">
@@ -108984,7 +109445,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="877">
+              <Item class="NumberValue" referent="878">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -108996,7 +109457,7 @@ end
                 </Properties>
               </Item>
             </Item>
-            <Item class="Animation" referent="878">
+            <Item class="Animation" referent="879">
               <Properties>
                 <string name="Name">Animation2</string>
                 <ContentId name="AnimationId">
@@ -109008,7 +109469,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="879">
+              <Item class="NumberValue" referent="880">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109020,7 +109481,7 @@ end
                 </Properties>
               </Item>
             </Item>
-            <Item class="Animation" referent="880">
+            <Item class="Animation" referent="881">
               <Properties>
                 <string name="Name">Animation3</string>
                 <ContentId name="AnimationId">
@@ -109032,7 +109493,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="881">
+              <Item class="NumberValue" referent="882">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109045,7 +109506,7 @@ end
               </Item>
             </Item>
           </Item>
-          <Item class="StringValue" referent="882">
+          <Item class="StringValue" referent="883">
             <Properties>
               <string name="Name">dance3</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109055,7 +109516,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="883">
+            <Item class="Animation" referent="884">
               <Properties>
                 <string name="Name">Animation1</string>
                 <ContentId name="AnimationId">
@@ -109067,7 +109528,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="884">
+              <Item class="NumberValue" referent="885">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109079,7 +109540,7 @@ end
                 </Properties>
               </Item>
             </Item>
-            <Item class="Animation" referent="885">
+            <Item class="Animation" referent="886">
               <Properties>
                 <string name="Name">Animation2</string>
                 <ContentId name="AnimationId">
@@ -109091,7 +109552,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="886">
+              <Item class="NumberValue" referent="887">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109103,7 +109564,7 @@ end
                 </Properties>
               </Item>
             </Item>
-            <Item class="Animation" referent="887">
+            <Item class="Animation" referent="888">
               <Properties>
                 <string name="Name">Animation3</string>
                 <ContentId name="AnimationId">
@@ -109115,7 +109576,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="888">
+              <Item class="NumberValue" referent="889">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109128,7 +109589,7 @@ end
               </Item>
             </Item>
           </Item>
-          <Item class="StringValue" referent="889">
+          <Item class="StringValue" referent="890">
             <Properties>
               <string name="Name">fall</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109138,7 +109599,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="890">
+            <Item class="Animation" referent="891">
               <Properties>
                 <string name="Name">FallAnim</string>
                 <ContentId name="AnimationId">
@@ -109152,7 +109613,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="891">
+          <Item class="StringValue" referent="892">
             <Properties>
               <string name="Name">idle</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109162,7 +109623,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="892">
+            <Item class="Animation" referent="893">
               <Properties>
                 <string name="Name">Animation1</string>
                 <ContentId name="AnimationId">
@@ -109174,7 +109635,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="893">
+              <Item class="NumberValue" referent="894">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109186,7 +109647,7 @@ end
                 </Properties>
               </Item>
             </Item>
-            <Item class="Animation" referent="894">
+            <Item class="Animation" referent="895">
               <Properties>
                 <string name="Name">Animation2</string>
                 <ContentId name="AnimationId">
@@ -109198,7 +109659,7 @@ end
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
-              <Item class="NumberValue" referent="895">
+              <Item class="NumberValue" referent="896">
                 <Properties>
                   <string name="Name">Weight</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109211,7 +109672,7 @@ end
               </Item>
             </Item>
           </Item>
-          <Item class="StringValue" referent="896">
+          <Item class="StringValue" referent="897">
             <Properties>
               <string name="Name">jump</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109221,7 +109682,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="897">
+            <Item class="Animation" referent="898">
               <Properties>
                 <string name="Name">JumpAnim</string>
                 <ContentId name="AnimationId">
@@ -109235,7 +109696,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="898">
+          <Item class="StringValue" referent="899">
             <Properties>
               <string name="Name">laugh</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109245,7 +109706,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="899">
+            <Item class="Animation" referent="900">
               <Properties>
                 <string name="Name">LaughAnim</string>
                 <ContentId name="AnimationId">
@@ -109259,7 +109720,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="900">
+          <Item class="StringValue" referent="901">
             <Properties>
               <string name="Name">point</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109269,7 +109730,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="901">
+            <Item class="Animation" referent="902">
               <Properties>
                 <string name="Name">PointAnim</string>
                 <ContentId name="AnimationId">
@@ -109283,7 +109744,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="902">
+          <Item class="StringValue" referent="903">
             <Properties>
               <string name="Name">sit</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109293,7 +109754,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="903">
+            <Item class="Animation" referent="904">
               <Properties>
                 <string name="Name">SitAnim</string>
                 <ContentId name="AnimationId">
@@ -109307,7 +109768,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="904">
+          <Item class="StringValue" referent="905">
             <Properties>
               <string name="Name">toollunge</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109317,7 +109778,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="905">
+            <Item class="Animation" referent="906">
               <Properties>
                 <string name="Name">ToolLungeAnim</string>
                 <ContentId name="AnimationId">
@@ -109331,7 +109792,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="906">
+          <Item class="StringValue" referent="907">
             <Properties>
               <string name="Name">toolnone</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109341,7 +109802,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="907">
+            <Item class="Animation" referent="908">
               <Properties>
                 <string name="Name">ToolNoneAnim</string>
                 <ContentId name="AnimationId">
@@ -109355,7 +109816,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="908">
+          <Item class="StringValue" referent="909">
             <Properties>
               <string name="Name">toolslash</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109365,7 +109826,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="909">
+            <Item class="Animation" referent="910">
               <Properties>
                 <string name="Name">ToolSlashAnim</string>
                 <ContentId name="AnimationId">
@@ -109379,7 +109840,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="910">
+          <Item class="StringValue" referent="911">
             <Properties>
               <string name="Name">wave</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109389,7 +109850,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="911">
+            <Item class="Animation" referent="912">
               <Properties>
                 <string name="Name">WaveAnim</string>
                 <ContentId name="AnimationId">
@@ -109403,7 +109864,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="NumberValue" referent="912">
+          <Item class="NumberValue" referent="913">
             <Properties>
               <string name="Name">ScaleDampeningPercent</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109414,7 +109875,7 @@ end
               <double name="Value">0.4000000059604645</double>
             </Properties>
           </Item>
-          <Item class="StringValue" referent="913">
+          <Item class="StringValue" referent="914">
             <Properties>
               <string name="Name">run</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109424,7 +109885,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="914">
+            <Item class="Animation" referent="915">
               <Properties>
                 <string name="Name">RunAnim</string>
                 <ContentId name="AnimationId">
@@ -109438,7 +109899,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="915">
+          <Item class="StringValue" referent="916">
             <Properties>
               <string name="Name">swim</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109448,7 +109909,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="916">
+            <Item class="Animation" referent="917">
               <Properties>
                 <string name="Name">Swim</string>
                 <ContentId name="AnimationId">
@@ -109462,7 +109923,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="917">
+          <Item class="StringValue" referent="918">
             <Properties>
               <string name="Name">swimidle</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109472,7 +109933,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="918">
+            <Item class="Animation" referent="919">
               <Properties>
                 <string name="Name">SwimIdle</string>
                 <ContentId name="AnimationId">
@@ -109486,7 +109947,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="919">
+          <Item class="StringValue" referent="920">
             <Properties>
               <string name="Name">walk</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109496,7 +109957,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="920">
+            <Item class="Animation" referent="921">
               <Properties>
                 <string name="Name">WalkAnim</string>
                 <ContentId name="AnimationId">
@@ -109510,7 +109971,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="BindableFunction" referent="921">
+          <Item class="BindableFunction" referent="922">
             <Properties>
               <string name="Name">PlayEmote</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109520,7 +109981,7 @@ end
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
-          <Item class="StringValue" referent="922">
+          <Item class="StringValue" referent="923">
             <Properties>
               <string name="Name">mood</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109530,7 +109991,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <string name="Value"></string>
             </Properties>
-            <Item class="Animation" referent="923">
+            <Item class="Animation" referent="924">
               <Properties>
                 <string name="Name">Animation1</string>
                 <ContentId name="AnimationId">
@@ -109545,7 +110006,7 @@ end
             </Item>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="924">
+        <Item class="MeshPart" referent="925">
           <Properties>
             <string name="Name">UpperTorso</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -109685,7 +110146,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="925">
+          <Item class="Attachment" referent="926">
             <Properties>
               <string name="Name">WaistRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109709,7 +110170,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="926">
+            <Item class="Vector3Value" referent="927">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109725,7 +110186,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="927">
+          <Item class="Attachment" referent="928">
             <Properties>
               <string name="Name">NeckRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109749,7 +110210,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="928">
+            <Item class="Vector3Value" referent="929">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109765,7 +110226,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="929">
+          <Item class="Attachment" referent="930">
             <Properties>
               <string name="Name">LeftShoulderRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109789,7 +110250,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="930">
+            <Item class="Vector3Value" referent="931">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109805,7 +110266,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="931">
+          <Item class="Attachment" referent="932">
             <Properties>
               <string name="Name">RightShoulderRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109829,7 +110290,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="932">
+            <Item class="Vector3Value" referent="933">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109845,7 +110306,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="933">
+          <Item class="Attachment" referent="934">
             <Properties>
               <string name="Name">BodyFrontAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109869,7 +110330,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="934">
+            <Item class="Vector3Value" referent="935">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109885,7 +110346,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="935">
+          <Item class="Attachment" referent="936">
             <Properties>
               <string name="Name">BodyBackAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109909,7 +110370,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="936">
+            <Item class="Vector3Value" referent="937">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109925,7 +110386,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="937">
+          <Item class="Attachment" referent="938">
             <Properties>
               <string name="Name">LeftCollarAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109949,7 +110410,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="938">
+            <Item class="Vector3Value" referent="939">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109965,7 +110426,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="939">
+          <Item class="Attachment" referent="940">
             <Properties>
               <string name="Name">RightCollarAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -109989,7 +110450,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="940">
+            <Item class="Vector3Value" referent="941">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110005,7 +110466,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="941">
+          <Item class="Attachment" referent="942">
             <Properties>
               <string name="Name">NeckAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110029,7 +110490,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="942">
+            <Item class="Vector3Value" referent="943">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110045,7 +110506,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="943">
+          <Item class="StringValue" referent="944">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110056,7 +110517,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="944">
+          <Item class="Vector3Value" referent="945">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110071,7 +110532,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="945">
+          <Item class="WrapTarget" referent="946">
             <Properties>
               <string name="Name">UpperTorso</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110122,7 +110583,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="946">
+          <Item class="Motor6D" referent="947">
             <Properties>
               <string name="Name">Waist</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110158,15 +110619,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">947</Ref>
-              <Ref name="Part1">924</Ref>
+              <Ref name="Part0">948</Ref>
+              <Ref name="Part1">925</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="947">
+        <Item class="MeshPart" referent="948">
           <Properties>
             <string name="Name">LowerTorso</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -110306,7 +110767,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="948">
+          <Item class="Attachment" referent="949">
             <Properties>
               <string name="Name">RootRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110330,7 +110791,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="949">
+            <Item class="Vector3Value" referent="950">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110346,7 +110807,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="950">
+          <Item class="Attachment" referent="951">
             <Properties>
               <string name="Name">WaistRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110370,7 +110831,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="951">
+            <Item class="Vector3Value" referent="952">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110386,7 +110847,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="952">
+          <Item class="Attachment" referent="953">
             <Properties>
               <string name="Name">LeftHipRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110410,7 +110871,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="953">
+            <Item class="Vector3Value" referent="954">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110426,7 +110887,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="954">
+          <Item class="Attachment" referent="955">
             <Properties>
               <string name="Name">RightHipRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110450,7 +110911,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="955">
+            <Item class="Vector3Value" referent="956">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110466,7 +110927,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="956">
+          <Item class="Attachment" referent="957">
             <Properties>
               <string name="Name">WaistCenterAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110490,7 +110951,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="957">
+            <Item class="Vector3Value" referent="958">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110506,7 +110967,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="958">
+          <Item class="Attachment" referent="959">
             <Properties>
               <string name="Name">WaistFrontAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110530,7 +110991,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="959">
+            <Item class="Vector3Value" referent="960">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110546,7 +111007,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="960">
+          <Item class="Attachment" referent="961">
             <Properties>
               <string name="Name">WaistBackAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110570,7 +111031,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="961">
+            <Item class="Vector3Value" referent="962">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110586,7 +111047,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="962">
+          <Item class="StringValue" referent="963">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110597,7 +111058,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="963">
+          <Item class="Vector3Value" referent="964">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110612,7 +111073,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="964">
+          <Item class="WrapTarget" referent="965">
             <Properties>
               <string name="Name">LowerTorso</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110663,7 +111124,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="965">
+          <Item class="Motor6D" referent="966">
             <Properties>
               <string name="Name">Root</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110699,15 +111160,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">841</Ref>
-              <Ref name="Part1">947</Ref>
+              <Ref name="Part0">842</Ref>
+              <Ref name="Part1">948</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="Shirt" referent="966">
+        <Item class="Shirt" referent="967">
           <Properties>
             <string name="Name">Shirt</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110725,7 +111186,7 @@ end
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="MeshPart" referent="967">
+        <Item class="MeshPart" referent="968">
           <Properties>
             <string name="Name">RightUpperArm</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -110865,7 +111326,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="968">
+          <Item class="Attachment" referent="969">
             <Properties>
               <string name="Name">RightShoulderRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110889,7 +111350,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="969">
+            <Item class="Vector3Value" referent="970">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110905,7 +111366,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="970">
+          <Item class="Attachment" referent="971">
             <Properties>
               <string name="Name">RightElbowRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110929,7 +111390,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="971">
+            <Item class="Vector3Value" referent="972">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110945,7 +111406,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="972">
+          <Item class="Attachment" referent="973">
             <Properties>
               <string name="Name">RightShoulderAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110969,7 +111430,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="973">
+            <Item class="Vector3Value" referent="974">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110985,7 +111446,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="974">
+          <Item class="StringValue" referent="975">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -110996,7 +111457,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="975">
+          <Item class="Vector3Value" referent="976">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111011,7 +111472,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="976">
+          <Item class="WrapTarget" referent="977">
             <Properties>
               <string name="Name">RightUpperArm</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111062,7 +111523,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="977">
+          <Item class="Motor6D" referent="978">
             <Properties>
               <string name="Name">RightShoulder</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111098,15 +111559,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">924</Ref>
-              <Ref name="Part1">967</Ref>
+              <Ref name="Part0">925</Ref>
+              <Ref name="Part1">968</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="978">
+        <Item class="MeshPart" referent="979">
           <Properties>
             <string name="Name">RightLowerArm</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -111246,7 +111707,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="979">
+          <Item class="Attachment" referent="980">
             <Properties>
               <string name="Name">RightElbowRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111270,7 +111731,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="980">
+            <Item class="Vector3Value" referent="981">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111286,7 +111747,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="981">
+          <Item class="Attachment" referent="982">
             <Properties>
               <string name="Name">RightWristRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111310,7 +111771,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="982">
+            <Item class="Vector3Value" referent="983">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111326,7 +111787,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="983">
+          <Item class="StringValue" referent="984">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111337,7 +111798,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="984">
+          <Item class="Vector3Value" referent="985">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111352,7 +111813,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="985">
+          <Item class="WrapTarget" referent="986">
             <Properties>
               <string name="Name">RightLowerArm</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111403,7 +111864,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="986">
+          <Item class="Motor6D" referent="987">
             <Properties>
               <string name="Name">RightElbow</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111439,15 +111900,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">967</Ref>
-              <Ref name="Part1">978</Ref>
+              <Ref name="Part0">968</Ref>
+              <Ref name="Part1">979</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="987">
+        <Item class="MeshPart" referent="988">
           <Properties>
             <string name="Name">RightHand</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -111587,7 +112048,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="988">
+          <Item class="Attachment" referent="989">
             <Properties>
               <string name="Name">RightWristRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111611,7 +112072,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="989">
+            <Item class="Vector3Value" referent="990">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111627,7 +112088,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="990">
+          <Item class="Attachment" referent="991">
             <Properties>
               <string name="Name">RightGripAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111651,7 +112112,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="991">
+            <Item class="Vector3Value" referent="992">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111667,7 +112128,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="992">
+          <Item class="StringValue" referent="993">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111678,7 +112139,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="993">
+          <Item class="Vector3Value" referent="994">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111693,7 +112154,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="994">
+          <Item class="WrapTarget" referent="995">
             <Properties>
               <string name="Name">RightHand</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111744,7 +112205,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="995">
+          <Item class="Motor6D" referent="996">
             <Properties>
               <string name="Name">RightWrist</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111780,15 +112241,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">978</Ref>
-              <Ref name="Part1">987</Ref>
+              <Ref name="Part0">979</Ref>
+              <Ref name="Part1">988</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="Pants" referent="996">
+        <Item class="Pants" referent="997">
           <Properties>
             <string name="Name">Pants</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111806,7 +112267,7 @@ end
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="MeshPart" referent="997">
+        <Item class="MeshPart" referent="998">
           <Properties>
             <string name="Name">Head</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -111946,7 +112407,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="StringValue" referent="998">
+          <Item class="StringValue" referent="999">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111957,7 +112418,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Attachment" referent="999">
+          <Item class="Attachment" referent="1000">
             <Properties>
               <string name="Name">FaceCenterAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111981,7 +112442,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1000">
+            <Item class="Vector3Value" referent="1001">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -111997,7 +112458,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1001">
+          <Item class="Attachment" referent="1002">
             <Properties>
               <string name="Name">FaceFrontAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112021,7 +112482,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1002">
+            <Item class="Vector3Value" referent="1003">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112037,7 +112498,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1003">
+          <Item class="Attachment" referent="1004">
             <Properties>
               <string name="Name">HairAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112061,7 +112522,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1004">
+            <Item class="Vector3Value" referent="1005">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112077,7 +112538,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1005">
+          <Item class="Attachment" referent="1006">
             <Properties>
               <string name="Name">HatAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112101,7 +112562,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1006">
+            <Item class="Vector3Value" referent="1007">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112117,7 +112578,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1007">
+          <Item class="Attachment" referent="1008">
             <Properties>
               <string name="Name">NeckRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112141,7 +112602,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1008">
+            <Item class="Vector3Value" referent="1009">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112157,7 +112618,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="WrapTarget" referent="1009">
+          <Item class="WrapTarget" referent="1010">
             <Properties>
               <string name="Name">Head</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112208,7 +112669,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Decal" referent="1010">
+          <Item class="Decal" referent="1011">
             <Properties>
               <string name="Name">face</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112254,7 +112715,7 @@ end
               <int name="ZIndex">1</int>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="1011">
+          <Item class="Vector3Value" referent="1012">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112269,7 +112730,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="1012">
+          <Item class="Motor6D" referent="1013">
             <Properties>
               <string name="Name">Neck</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112305,15 +112766,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">924</Ref>
-              <Ref name="Part1">997</Ref>
+              <Ref name="Part0">925</Ref>
+              <Ref name="Part1">998</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="1013">
+        <Item class="MeshPart" referent="1014">
           <Properties>
             <string name="Name">LeftUpperArm</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -112453,7 +112914,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="1014">
+          <Item class="Attachment" referent="1015">
             <Properties>
               <string name="Name">LeftShoulderRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112477,7 +112938,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1015">
+            <Item class="Vector3Value" referent="1016">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112493,7 +112954,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1016">
+          <Item class="Attachment" referent="1017">
             <Properties>
               <string name="Name">LeftElbowRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112517,7 +112978,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1017">
+            <Item class="Vector3Value" referent="1018">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112533,7 +112994,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1018">
+          <Item class="Attachment" referent="1019">
             <Properties>
               <string name="Name">LeftShoulderAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112557,7 +113018,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1019">
+            <Item class="Vector3Value" referent="1020">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112573,7 +113034,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="1020">
+          <Item class="StringValue" referent="1021">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112584,7 +113045,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="1021">
+          <Item class="Vector3Value" referent="1022">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112599,7 +113060,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="1022">
+          <Item class="WrapTarget" referent="1023">
             <Properties>
               <string name="Name">LeftUpperArm</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112650,7 +113111,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="1023">
+          <Item class="Motor6D" referent="1024">
             <Properties>
               <string name="Name">LeftShoulder</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112686,15 +113147,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">924</Ref>
-              <Ref name="Part1">1013</Ref>
+              <Ref name="Part0">925</Ref>
+              <Ref name="Part1">1014</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="1024">
+        <Item class="MeshPart" referent="1025">
           <Properties>
             <string name="Name">LeftLowerArm</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -112834,7 +113295,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="1025">
+          <Item class="Attachment" referent="1026">
             <Properties>
               <string name="Name">LeftElbowRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112858,7 +113319,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1026">
+            <Item class="Vector3Value" referent="1027">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112874,7 +113335,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1027">
+          <Item class="Attachment" referent="1028">
             <Properties>
               <string name="Name">LeftWristRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112898,7 +113359,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1028">
+            <Item class="Vector3Value" referent="1029">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112914,7 +113375,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="1029">
+          <Item class="StringValue" referent="1030">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112925,7 +113386,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="1030">
+          <Item class="Vector3Value" referent="1031">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112940,7 +113401,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="1031">
+          <Item class="WrapTarget" referent="1032">
             <Properties>
               <string name="Name">LeftLowerArm</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -112991,7 +113452,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="1032">
+          <Item class="Motor6D" referent="1033">
             <Properties>
               <string name="Name">LeftElbow</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113027,15 +113488,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">1013</Ref>
-              <Ref name="Part1">1024</Ref>
+              <Ref name="Part0">1014</Ref>
+              <Ref name="Part1">1025</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="1033">
+        <Item class="MeshPart" referent="1034">
           <Properties>
             <string name="Name">LeftHand</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -113175,7 +113636,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="1034">
+          <Item class="Attachment" referent="1035">
             <Properties>
               <string name="Name">LeftWristRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113199,7 +113660,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1035">
+            <Item class="Vector3Value" referent="1036">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113215,7 +113676,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1036">
+          <Item class="Attachment" referent="1037">
             <Properties>
               <string name="Name">LeftGripAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113239,7 +113700,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1037">
+            <Item class="Vector3Value" referent="1038">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113255,7 +113716,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="1038">
+          <Item class="StringValue" referent="1039">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113266,7 +113727,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="1039">
+          <Item class="Vector3Value" referent="1040">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113281,7 +113742,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="1040">
+          <Item class="WrapTarget" referent="1041">
             <Properties>
               <string name="Name">LeftHand</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113332,7 +113793,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="1041">
+          <Item class="Motor6D" referent="1042">
             <Properties>
               <string name="Name">LeftWrist</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113368,15 +113829,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">1024</Ref>
-              <Ref name="Part1">1033</Ref>
+              <Ref name="Part0">1025</Ref>
+              <Ref name="Part1">1034</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="1042">
+        <Item class="MeshPart" referent="1043">
           <Properties>
             <string name="Name">LeftUpperLeg</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -113516,7 +113977,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="1043">
+          <Item class="Attachment" referent="1044">
             <Properties>
               <string name="Name">LeftHipRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113540,7 +114001,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1044">
+            <Item class="Vector3Value" referent="1045">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113556,7 +114017,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1045">
+          <Item class="Attachment" referent="1046">
             <Properties>
               <string name="Name">LeftKneeRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113580,7 +114041,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1046">
+            <Item class="Vector3Value" referent="1047">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113596,7 +114057,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Vector3Value" referent="1047">
+          <Item class="Vector3Value" referent="1048">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113611,7 +114072,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="StringValue" referent="1048">
+          <Item class="StringValue" referent="1049">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113622,7 +114083,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="1049">
+          <Item class="WrapTarget" referent="1050">
             <Properties>
               <string name="Name">LeftUpperLeg</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113673,7 +114134,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="1050">
+          <Item class="Motor6D" referent="1051">
             <Properties>
               <string name="Name">LeftHip</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113709,15 +114170,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">947</Ref>
-              <Ref name="Part1">1042</Ref>
+              <Ref name="Part0">948</Ref>
+              <Ref name="Part1">1043</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="1051">
+        <Item class="MeshPart" referent="1052">
           <Properties>
             <string name="Name">LeftLowerLeg</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -113857,7 +114318,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="1052">
+          <Item class="Attachment" referent="1053">
             <Properties>
               <string name="Name">LeftKneeRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113881,7 +114342,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1053">
+            <Item class="Vector3Value" referent="1054">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113897,7 +114358,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1054">
+          <Item class="Attachment" referent="1055">
             <Properties>
               <string name="Name">LeftAnkleRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113921,7 +114382,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1055">
+            <Item class="Vector3Value" referent="1056">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113937,7 +114398,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Vector3Value" referent="1056">
+          <Item class="Vector3Value" referent="1057">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113952,7 +114413,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="StringValue" referent="1057">
+          <Item class="StringValue" referent="1058">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -113963,7 +114424,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="1058">
+          <Item class="WrapTarget" referent="1059">
             <Properties>
               <string name="Name">LeftLowerLeg</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114014,7 +114475,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="1059">
+          <Item class="Motor6D" referent="1060">
             <Properties>
               <string name="Name">LeftKnee</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114050,15 +114511,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">1042</Ref>
-              <Ref name="Part1">1051</Ref>
+              <Ref name="Part0">1043</Ref>
+              <Ref name="Part1">1052</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="1060">
+        <Item class="MeshPart" referent="1061">
           <Properties>
             <string name="Name">LeftFoot</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -114198,7 +114659,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="1061">
+          <Item class="Attachment" referent="1062">
             <Properties>
               <string name="Name">LeftAnkleRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114222,7 +114683,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1062">
+            <Item class="Vector3Value" referent="1063">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114238,7 +114699,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1063">
+          <Item class="Attachment" referent="1064">
             <Properties>
               <string name="Name">LeftFootAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114262,7 +114723,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1064">
+            <Item class="Vector3Value" referent="1065">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114278,7 +114739,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Vector3Value" referent="1065">
+          <Item class="Vector3Value" referent="1066">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114293,7 +114754,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="StringValue" referent="1066">
+          <Item class="StringValue" referent="1067">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114304,7 +114765,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="1067">
+          <Item class="WrapTarget" referent="1068">
             <Properties>
               <string name="Name">LeftFoot</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114355,7 +114816,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="1068">
+          <Item class="Motor6D" referent="1069">
             <Properties>
               <string name="Name">LeftAnkle</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114391,15 +114852,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">1051</Ref>
-              <Ref name="Part1">1060</Ref>
+              <Ref name="Part0">1052</Ref>
+              <Ref name="Part1">1061</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="1069">
+        <Item class="MeshPart" referent="1070">
           <Properties>
             <string name="Name">RightUpperLeg</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -114539,7 +115000,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="1070">
+          <Item class="Attachment" referent="1071">
             <Properties>
               <string name="Name">RightHipRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114563,7 +115024,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1071">
+            <Item class="Vector3Value" referent="1072">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114579,7 +115040,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1072">
+          <Item class="Attachment" referent="1073">
             <Properties>
               <string name="Name">RightKneeRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114603,7 +115064,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1073">
+            <Item class="Vector3Value" referent="1074">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114619,7 +115080,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="1074">
+          <Item class="StringValue" referent="1075">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114630,7 +115091,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="1075">
+          <Item class="Vector3Value" referent="1076">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114645,7 +115106,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="1076">
+          <Item class="WrapTarget" referent="1077">
             <Properties>
               <string name="Name">RightUpperLeg</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114696,7 +115157,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="1077">
+          <Item class="Motor6D" referent="1078">
             <Properties>
               <string name="Name">RightHip</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114732,15 +115193,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">947</Ref>
-              <Ref name="Part1">1069</Ref>
+              <Ref name="Part0">948</Ref>
+              <Ref name="Part1">1070</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="1078">
+        <Item class="MeshPart" referent="1079">
           <Properties>
             <string name="Name">RightLowerLeg</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -114880,7 +115341,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="1079">
+          <Item class="Attachment" referent="1080">
             <Properties>
               <string name="Name">RightKneeRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114904,7 +115365,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1080">
+            <Item class="Vector3Value" referent="1081">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114920,7 +115381,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1081">
+          <Item class="Attachment" referent="1082">
             <Properties>
               <string name="Name">RightAnkleRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114944,7 +115405,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1082">
+            <Item class="Vector3Value" referent="1083">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114960,7 +115421,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="1083">
+          <Item class="StringValue" referent="1084">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114971,7 +115432,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="1084">
+          <Item class="Vector3Value" referent="1085">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -114986,7 +115447,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="1085">
+          <Item class="WrapTarget" referent="1086">
             <Properties>
               <string name="Name">RightLowerLeg</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115037,7 +115498,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="1086">
+          <Item class="Motor6D" referent="1087">
             <Properties>
               <string name="Name">RightKnee</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115073,15 +115534,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">1069</Ref>
-              <Ref name="Part1">1078</Ref>
+              <Ref name="Part0">1070</Ref>
+              <Ref name="Part1">1079</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="MeshPart" referent="1087">
+        <Item class="MeshPart" referent="1088">
           <Properties>
             <string name="Name">RightFoot</string>
             <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -115221,7 +115682,7 @@ end
             </Vector3>
             <int name="VertexCount">0</int>
           </Properties>
-          <Item class="Attachment" referent="1088">
+          <Item class="Attachment" referent="1089">
             <Properties>
               <string name="Name">RightAnkleRigAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115245,7 +115706,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1089">
+            <Item class="Vector3Value" referent="1090">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115261,7 +115722,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="Attachment" referent="1090">
+          <Item class="Attachment" referent="1091">
             <Properties>
               <string name="Name">RightFootAttachment</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115285,7 +115746,7 @@ end
               <BinaryString name="Tags"></BinaryString>
               <bool name="Visible">false</bool>
             </Properties>
-            <Item class="Vector3Value" referent="1091">
+            <Item class="Vector3Value" referent="1092">
               <Properties>
                 <string name="Name">OriginalPosition</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115301,7 +115762,7 @@ end
               </Properties>
             </Item>
           </Item>
-          <Item class="StringValue" referent="1092">
+          <Item class="StringValue" referent="1093">
             <Properties>
               <string name="Name">AvatarPartScaleType</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115312,7 +115773,7 @@ end
               <string name="Value">Classic</string>
             </Properties>
           </Item>
-          <Item class="Vector3Value" referent="1093">
+          <Item class="Vector3Value" referent="1094">
             <Properties>
               <string name="Name">OriginalSize</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115327,7 +115788,7 @@ end
               </Vector3>
             </Properties>
           </Item>
-          <Item class="WrapTarget" referent="1094">
+          <Item class="WrapTarget" referent="1095">
             <Properties>
               <string name="Name">RightFoot</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115378,7 +115839,7 @@ end
               </ContentId>
             </Properties>
           </Item>
-          <Item class="Motor6D" referent="1095">
+          <Item class="Motor6D" referent="1096">
             <Properties>
               <string name="Name">RightAnkle</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115414,15 +115875,15 @@ end
               <float name="DesiredAngle">0</float>
               <bool name="Enabled">true</bool>
               <float name="MaxVelocity">0</float>
-              <Ref name="Part0">1078</Ref>
-              <Ref name="Part1">1087</Ref>
+              <Ref name="Part0">1079</Ref>
+              <Ref name="Part1">1088</Ref>
               <bool name="DefinesCapabilities">false</bool>
               <int64 name="SourceAssetId">-1</int64>
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
         </Item>
-        <Item class="Accessory" referent="1096">
+        <Item class="Accessory" referent="1097">
           <Properties>
             <string name="Name">Pal Hair</string>
             <token name="AccessoryType">2</token>
@@ -115446,7 +115907,7 @@ end
             <int64 name="SourceAssetId">-1</int64>
             <BinaryString name="Tags"></BinaryString>
           </Properties>
-          <Item class="MeshPart" referent="1097">
+          <Item class="MeshPart" referent="1098">
             <Properties>
               <string name="Name">Handle</string>
               <SharedString name="AeroMeshData">rxNJufX5oaagQE3qNtzJSQ==</SharedString>
@@ -115585,7 +116046,7 @@ end
               </Vector3>
               <int name="VertexCount">0</int>
             </Properties>
-            <Item class="Attachment" referent="1098">
+            <Item class="Attachment" referent="1099">
               <Properties>
                 <string name="Name">HairAttachment</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115609,7 +116070,7 @@ end
                 <BinaryString name="Tags"></BinaryString>
                 <bool name="Visible">false</bool>
               </Properties>
-              <Item class="Vector3Value" referent="1099">
+              <Item class="Vector3Value" referent="1100">
                 <Properties>
                   <string name="Name">OriginalPosition</string>
                   <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115625,7 +116086,7 @@ end
                 </Properties>
               </Item>
             </Item>
-            <Item class="Vector3Value" referent="1100">
+            <Item class="Vector3Value" referent="1101">
               <Properties>
                 <string name="Name">OriginalSize</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -115638,47 +116099,6 @@ end
                   <Y>1.3249477</Y>
                   <Z>1.948175</Z>
                 </Vector3>
-              </Properties>
-            </Item>
-            <Item class="Weld" referent="1101">
-              <Properties>
-                <string name="Name">AccessoryWeld</string>
-                <BinaryString name="AttributesSerialize"></BinaryString>
-                <CoordinateFrame name="C0">
-                  <X>0.00000000865748</X>
-                  <Y>0.3499999</Y>
-                  <Z>0.24972776</Z>
-                  <R00>1</R00>
-                  <R01>0</R01>
-                  <R02>0</R02>
-                  <R10>0</R10>
-                  <R11>1</R11>
-                  <R12>0</R12>
-                  <R20>0</R20>
-                  <R21>0</R21>
-                  <R22>1</R22>
-                </CoordinateFrame>
-                <CoordinateFrame name="C1">
-                  <X>0</X>
-                  <Y>0.59</Y>
-                  <Z>-0</Z>
-                  <R00>1</R00>
-                  <R01>0</R01>
-                  <R02>0</R02>
-                  <R10>0</R10>
-                  <R11>1</R11>
-                  <R12>0</R12>
-                  <R20>0</R20>
-                  <R21>0</R21>
-                  <R22>1</R22>
-                </CoordinateFrame>
-                <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-                <bool name="Enabled">true</bool>
-                <Ref name="Part0">1097</Ref>
-                <Ref name="Part1">997</Ref>
-                <bool name="DefinesCapabilities">false</bool>
-                <int64 name="SourceAssetId">-1</int64>
-                <BinaryString name="Tags"></BinaryString>
               </Properties>
             </Item>
             <Item class="Weld" referent="1102">
@@ -115715,8 +116135,8 @@ end
                 </CoordinateFrame>
                 <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
                 <bool name="Enabled">true</bool>
-                <Ref name="Part0">1097</Ref>
-                <Ref name="Part1">997</Ref>
+                <Ref name="Part0">1098</Ref>
+                <Ref name="Part1">998</Ref>
                 <bool name="DefinesCapabilities">false</bool>
                 <int64 name="SourceAssetId">-1</int64>
                 <BinaryString name="Tags"></BinaryString>
@@ -115865,23 +116285,23 @@ end
         </Properties>
       </Item>
     </Item>
-    <Item class="Camera" referent="836">
+    <Item class="Camera" referent="837">
       <Properties>
         <string name="Name">Camera</string>
         <BinaryString name="AttributesSerialize"></BinaryString>
         <CoordinateFrame name="CFrame">
-          <X>86.35855</X>
-          <Y>48.05424</Y>
-          <Z>6.789856</Z>
-          <R00>0.43471396</R00>
-          <R01>0.88948166</R01>
-          <R02>-0.14087689</R02>
+          <X>82.92771</X>
+          <Y>61.95545</Y>
+          <Z>-0.10430168</Z>
+          <R00>0.4347247</R00>
+          <R01>0.88947636</R01>
+          <R02>-0.14087687</R02>
           <R10>-0.0000000037252903</R10>
-          <R11>0.15643105</R11>
-          <R12>0.9876889</R12>
-          <R20>0.90056866</R20>
-          <R21>-0.42936215</R21>
-          <R22>0.06800276</R22>
+          <R11>0.15643194</R11>
+          <R12>0.9876888</R12>
+          <R20>0.9005634</R20>
+          <R21>-0.4293727</R21>
+          <R22>0.068004824</R22>
         </CoordinateFrame>
         <Ref name="CameraSubject">null</Ref>
         <token name="CameraType">0</token>
@@ -115889,9 +116309,9 @@ end
         <float name="FieldOfView">70</float>
         <token name="FieldOfViewMode">0</token>
         <CoordinateFrame name="Focus">
-          <X>86.640305</X>
-          <Y>46.078865</Y>
-          <Z>6.6538506</Z>
+          <X>83.209465</X>
+          <Y>59.980072</Y>
+          <Z>-0.24031124</Z>
           <R00>1</R00>
           <R01>0</R01>
           <R02>0</R02>
@@ -116074,106 +116494,7 @@ end
           </CFrame>
         </OptionalCoordinateFrame>
       </Properties>
-      <Item class="Part" referent="1108">
-        <Properties>
-          <string name="Name">Part</string>
-          <bool name="Anchored">true</bool>
-          <BinaryString name="AttributesSerialize"></BinaryString>
-          <bool name="AudioCanCollide">true</bool>
-          <float name="BackParamA">-0.5</float>
-          <float name="BackParamB">0.5</float>
-          <token name="BackSurface">0</token>
-          <token name="BackSurfaceInput">0</token>
-          <float name="BottomParamA">-0.5</float>
-          <float name="BottomParamB">0.5</float>
-          <token name="BottomSurface">0</token>
-          <token name="BottomSurfaceInput">0</token>
-          <CoordinateFrame name="CFrame">
-            <X>96.5</X>
-            <Y>-5.499983</Y>
-            <Z>-1</Z>
-            <R00>1</R00>
-            <R01>0</R01>
-            <R02>0</R02>
-            <R10>0</R10>
-            <R11>1</R11>
-            <R12>0</R12>
-            <R20>0</R20>
-            <R21>0</R21>
-            <R22>1</R22>
-          </CoordinateFrame>
-          <bool name="CanCollide">true</bool>
-          <bool name="CanQuery">true</bool>
-          <bool name="CanTouch">true</bool>
-          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-          <bool name="CastShadow">true</bool>
-          <string name="CollisionGroup">Default</string>
-          <int name="CollisionGroupId">0</int>
-          <Color3uint8 name="Color3uint8">10724005</Color3uint8>
-          <PhysicalProperties name="CustomPhysicalProperties">
-            <CustomPhysics>false</CustomPhysics>
-          </PhysicalProperties>
-          <bool name="EnableFluidForces">true</bool>
-          <token name="formFactorRaw">1</token>
-          <float name="FrontParamA">-0.5</float>
-          <float name="FrontParamB">0.5</float>
-          <token name="FrontSurface">0</token>
-          <token name="FrontSurfaceInput">0</token>
-          <float name="LeftParamA">-0.5</float>
-          <float name="LeftParamB">0.5</float>
-          <token name="LeftSurface">0</token>
-          <token name="LeftSurfaceInput">0</token>
-          <bool name="Locked">false</bool>
-          <bool name="Massless">false</bool>
-          <token name="Material">256</token>
-          <string name="MaterialVariantSerialized"></string>
-          <CoordinateFrame name="PivotOffset">
-            <X>0</X>
-            <Y>0</Y>
-            <Z>0</Z>
-            <R00>1</R00>
-            <R01>0</R01>
-            <R02>0</R02>
-            <R10>0</R10>
-            <R11>1</R11>
-            <R12>0</R12>
-            <R20>0</R20>
-            <R21>0</R21>
-            <R22>1</R22>
-          </CoordinateFrame>
-          <float name="Reflectance">0</float>
-          <float name="RightParamA">-0.5</float>
-          <float name="RightParamB">0.5</float>
-          <token name="RightSurface">0</token>
-          <token name="RightSurfaceInput">0</token>
-          <int name="RootPriority">0</int>
-          <Vector3 name="RotVelocity">
-            <X>0</X>
-            <Y>0</Y>
-            <Z>0</Z>
-          </Vector3>
-          <bool name="DefinesCapabilities">false</bool>
-          <token name="shape">1</token>
-          <Vector3 name="size">
-            <X>5</X>
-            <Y>1</Y>
-            <Z>26</Z>
-          </Vector3>
-          <int64 name="SourceAssetId">-1</int64>
-          <BinaryString name="Tags"></BinaryString>
-          <float name="TopParamA">-0.5</float>
-          <float name="TopParamB">0.5</float>
-          <token name="TopSurface">0</token>
-          <token name="TopSurfaceInput">0</token>
-          <float name="Transparency">0</float>
-          <Vector3 name="Velocity">
-            <X>0</X>
-            <Y>0</Y>
-            <Z>0</Z>
-          </Vector3>
-        </Properties>
-      </Item>
-      <Item class="Folder" referent="1109">
+      <Item class="Folder" referent="1108">
         <Properties>
           <string name="Name">waypoints</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -116182,7 +116503,7 @@ end
           <int64 name="SourceAssetId">-1</int64>
           <BinaryString name="Tags"></BinaryString>
         </Properties>
-        <Item class="Part" referent="1110">
+        <Item class="Part" referent="1109">
           <Properties>
             <string name="Name">1</string>
             <bool name="Anchored">true</bool>
@@ -116281,7 +116602,7 @@ end
             </Vector3>
           </Properties>
         </Item>
-        <Item class="Part" referent="1111">
+        <Item class="Part" referent="1110">
           <Properties>
             <string name="Name">2</string>
             <bool name="Anchored">true</bool>
@@ -116380,7 +116701,7 @@ end
             </Vector3>
           </Properties>
         </Item>
-        <Item class="Part" referent="1112">
+        <Item class="Part" referent="1111">
           <Properties>
             <string name="Name">3</string>
             <bool name="Anchored">true</bool>
@@ -116480,7 +116801,7 @@ end
           </Properties>
         </Item>
       </Item>
-      <Item class="Folder" referent="1113">
+      <Item class="Folder" referent="1112">
         <Properties>
           <string name="Name">enemies</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -116490,115 +116811,333 @@ end
           <BinaryString name="Tags"></BinaryString>
         </Properties>
       </Item>
-      <Item class="Folder" referent="1114">
+      <Item class="Folder" referent="1113">
         <Properties>
-          <string name="Name">towers</string>
+          <string name="Name">path</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
           <int64 name="SourceAssetId">-1</int64>
           <BinaryString name="Tags"></BinaryString>
         </Properties>
+        <Item class="Part" referent="1114">
+          <Properties>
+            <string name="Name">Part</string>
+            <bool name="Anchored">true</bool>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <bool name="AudioCanCollide">true</bool>
+            <float name="BackParamA">-0.5</float>
+            <float name="BackParamB">0.5</float>
+            <token name="BackSurface">0</token>
+            <token name="BackSurfaceInput">0</token>
+            <float name="BottomParamA">-0.5</float>
+            <float name="BottomParamB">0.5</float>
+            <token name="BottomSurface">0</token>
+            <token name="BottomSurfaceInput">0</token>
+            <CoordinateFrame name="CFrame">
+              <X>96.5</X>
+              <Y>-5.499983</Y>
+              <Z>-1</Z>
+              <R00>1</R00>
+              <R01>0</R01>
+              <R02>0</R02>
+              <R10>0</R10>
+              <R11>1</R11>
+              <R12>0</R12>
+              <R20>0</R20>
+              <R21>0</R21>
+              <R22>1</R22>
+            </CoordinateFrame>
+            <bool name="CanCollide">true</bool>
+            <bool name="CanQuery">true</bool>
+            <bool name="CanTouch">true</bool>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="CastShadow">true</bool>
+            <string name="CollisionGroup">Default</string>
+            <int name="CollisionGroupId">0</int>
+            <Color3uint8 name="Color3uint8">10724005</Color3uint8>
+            <PhysicalProperties name="CustomPhysicalProperties">
+              <CustomPhysics>false</CustomPhysics>
+            </PhysicalProperties>
+            <bool name="EnableFluidForces">true</bool>
+            <token name="formFactorRaw">1</token>
+            <float name="FrontParamA">-0.5</float>
+            <float name="FrontParamB">0.5</float>
+            <token name="FrontSurface">0</token>
+            <token name="FrontSurfaceInput">0</token>
+            <float name="LeftParamA">-0.5</float>
+            <float name="LeftParamB">0.5</float>
+            <token name="LeftSurface">0</token>
+            <token name="LeftSurfaceInput">0</token>
+            <bool name="Locked">false</bool>
+            <bool name="Massless">false</bool>
+            <token name="Material">256</token>
+            <string name="MaterialVariantSerialized"></string>
+            <CoordinateFrame name="PivotOffset">
+              <X>0</X>
+              <Y>0</Y>
+              <Z>0</Z>
+              <R00>1</R00>
+              <R01>0</R01>
+              <R02>0</R02>
+              <R10>0</R10>
+              <R11>1</R11>
+              <R12>0</R12>
+              <R20>0</R20>
+              <R21>0</R21>
+              <R22>1</R22>
+            </CoordinateFrame>
+            <float name="Reflectance">0</float>
+            <float name="RightParamA">-0.5</float>
+            <float name="RightParamB">0.5</float>
+            <token name="RightSurface">0</token>
+            <token name="RightSurfaceInput">0</token>
+            <int name="RootPriority">0</int>
+            <Vector3 name="RotVelocity">
+              <X>0</X>
+              <Y>0</Y>
+              <Z>0</Z>
+            </Vector3>
+            <bool name="DefinesCapabilities">false</bool>
+            <token name="shape">1</token>
+            <Vector3 name="size">
+              <X>5</X>
+              <Y>1</Y>
+              <Z>26</Z>
+            </Vector3>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+            <float name="TopParamA">-0.5</float>
+            <float name="TopParamB">0.5</float>
+            <token name="TopSurface">0</token>
+            <token name="TopSurfaceInput">0</token>
+            <float name="Transparency">0</float>
+            <Vector3 name="Velocity">
+              <X>0</X>
+              <Y>0</Y>
+              <Z>0</Z>
+            </Vector3>
+          </Properties>
+        </Item>
+        <Item class="Part" referent="1115">
+          <Properties>
+            <string name="Name">Part</string>
+            <bool name="Anchored">true</bool>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <bool name="AudioCanCollide">true</bool>
+            <float name="BackParamA">-0.5</float>
+            <float name="BackParamB">0.5</float>
+            <token name="BackSurface">0</token>
+            <token name="BackSurfaceInput">0</token>
+            <float name="BottomParamA">-0.5</float>
+            <float name="BottomParamB">0.5</float>
+            <token name="BottomSurface">0</token>
+            <token name="BottomSurfaceInput">0</token>
+            <CoordinateFrame name="CFrame">
+              <X>85</X>
+              <Y>-5.499983</Y>
+              <Z>9.5</Z>
+              <R00>1</R00>
+              <R01>0</R01>
+              <R02>0</R02>
+              <R10>0</R10>
+              <R11>1</R11>
+              <R12>0</R12>
+              <R20>0</R20>
+              <R21>0</R21>
+              <R22>1</R22>
+            </CoordinateFrame>
+            <bool name="CanCollide">true</bool>
+            <bool name="CanQuery">true</bool>
+            <bool name="CanTouch">true</bool>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="CastShadow">true</bool>
+            <string name="CollisionGroup">Default</string>
+            <int name="CollisionGroupId">0</int>
+            <Color3uint8 name="Color3uint8">10724005</Color3uint8>
+            <PhysicalProperties name="CustomPhysicalProperties">
+              <CustomPhysics>false</CustomPhysics>
+            </PhysicalProperties>
+            <bool name="EnableFluidForces">true</bool>
+            <token name="formFactorRaw">1</token>
+            <float name="FrontParamA">-0.5</float>
+            <float name="FrontParamB">0.5</float>
+            <token name="FrontSurface">0</token>
+            <token name="FrontSurfaceInput">0</token>
+            <float name="LeftParamA">-0.5</float>
+            <float name="LeftParamB">0.5</float>
+            <token name="LeftSurface">0</token>
+            <token name="LeftSurfaceInput">0</token>
+            <bool name="Locked">false</bool>
+            <bool name="Massless">false</bool>
+            <token name="Material">256</token>
+            <string name="MaterialVariantSerialized"></string>
+            <CoordinateFrame name="PivotOffset">
+              <X>0</X>
+              <Y>0</Y>
+              <Z>0</Z>
+              <R00>1</R00>
+              <R01>0</R01>
+              <R02>0</R02>
+              <R10>0</R10>
+              <R11>1</R11>
+              <R12>0</R12>
+              <R20>0</R20>
+              <R21>0</R21>
+              <R22>1</R22>
+            </CoordinateFrame>
+            <float name="Reflectance">0</float>
+            <float name="RightParamA">-0.5</float>
+            <float name="RightParamB">0.5</float>
+            <token name="RightSurface">0</token>
+            <token name="RightSurfaceInput">0</token>
+            <int name="RootPriority">0</int>
+            <Vector3 name="RotVelocity">
+              <X>0</X>
+              <Y>0</Y>
+              <Z>0</Z>
+            </Vector3>
+            <bool name="DefinesCapabilities">false</bool>
+            <token name="shape">1</token>
+            <Vector3 name="size">
+              <X>18</X>
+              <Y>1</Y>
+              <Z>5</Z>
+            </Vector3>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+            <float name="TopParamA">-0.5</float>
+            <float name="TopParamB">0.5</float>
+            <token name="TopSurface">0</token>
+            <token name="TopSurfaceInput">0</token>
+            <float name="Transparency">0</float>
+            <Vector3 name="Velocity">
+              <X>0</X>
+              <Y>0</Y>
+              <Z>0</Z>
+            </Vector3>
+          </Properties>
+        </Item>
       </Item>
-      <Item class="Part" referent="1115">
-        <Properties>
-          <string name="Name">Part</string>
-          <bool name="Anchored">true</bool>
-          <BinaryString name="AttributesSerialize"></BinaryString>
-          <bool name="AudioCanCollide">true</bool>
-          <float name="BackParamA">-0.5</float>
-          <float name="BackParamB">0.5</float>
-          <token name="BackSurface">0</token>
-          <token name="BackSurfaceInput">0</token>
-          <float name="BottomParamA">-0.5</float>
-          <float name="BottomParamB">0.5</float>
-          <token name="BottomSurface">0</token>
-          <token name="BottomSurfaceInput">0</token>
-          <CoordinateFrame name="CFrame">
-            <X>85</X>
-            <Y>-5.499983</Y>
-            <Z>9.5</Z>
-            <R00>1</R00>
-            <R01>0</R01>
-            <R02>0</R02>
-            <R10>0</R10>
-            <R11>1</R11>
-            <R12>0</R12>
-            <R20>0</R20>
-            <R21>0</R21>
-            <R22>1</R22>
-          </CoordinateFrame>
-          <bool name="CanCollide">true</bool>
-          <bool name="CanQuery">true</bool>
-          <bool name="CanTouch">true</bool>
-          <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-          <bool name="CastShadow">true</bool>
-          <string name="CollisionGroup">Default</string>
-          <int name="CollisionGroupId">0</int>
-          <Color3uint8 name="Color3uint8">10724005</Color3uint8>
-          <PhysicalProperties name="CustomPhysicalProperties">
-            <CustomPhysics>false</CustomPhysics>
-          </PhysicalProperties>
-          <bool name="EnableFluidForces">true</bool>
-          <token name="formFactorRaw">1</token>
-          <float name="FrontParamA">-0.5</float>
-          <float name="FrontParamB">0.5</float>
-          <token name="FrontSurface">0</token>
-          <token name="FrontSurfaceInput">0</token>
-          <float name="LeftParamA">-0.5</float>
-          <float name="LeftParamB">0.5</float>
-          <token name="LeftSurface">0</token>
-          <token name="LeftSurfaceInput">0</token>
-          <bool name="Locked">false</bool>
-          <bool name="Massless">false</bool>
-          <token name="Material">256</token>
-          <string name="MaterialVariantSerialized"></string>
-          <CoordinateFrame name="PivotOffset">
-            <X>0</X>
-            <Y>0</Y>
-            <Z>0</Z>
-            <R00>1</R00>
-            <R01>0</R01>
-            <R02>0</R02>
-            <R10>0</R10>
-            <R11>1</R11>
-            <R12>0</R12>
-            <R20>0</R20>
-            <R21>0</R21>
-            <R22>1</R22>
-          </CoordinateFrame>
-          <float name="Reflectance">0</float>
-          <float name="RightParamA">-0.5</float>
-          <float name="RightParamB">0.5</float>
-          <token name="RightSurface">0</token>
-          <token name="RightSurfaceInput">0</token>
-          <int name="RootPriority">0</int>
-          <Vector3 name="RotVelocity">
-            <X>0</X>
-            <Y>0</Y>
-            <Z>0</Z>
-          </Vector3>
-          <bool name="DefinesCapabilities">false</bool>
-          <token name="shape">1</token>
-          <Vector3 name="size">
-            <X>18</X>
-            <Y>1</Y>
-            <Z>5</Z>
-          </Vector3>
-          <int64 name="SourceAssetId">-1</int64>
-          <BinaryString name="Tags"></BinaryString>
-          <float name="TopParamA">-0.5</float>
-          <float name="TopParamB">0.5</float>
-          <token name="TopSurface">0</token>
-          <token name="TopSurfaceInput">0</token>
-          <float name="Transparency">0</float>
-          <Vector3 name="Velocity">
-            <X>0</X>
-            <Y>0</Y>
-            <Z>0</Z>
-          </Vector3>
-        </Properties>
-      </Item>
+    </Item>
+    <Item class="Part" referent="1116">
+      <Properties>
+        <string name="Name">tPos</string>
+        <bool name="Anchored">false</bool>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <bool name="AudioCanCollide">true</bool>
+        <float name="BackParamA">-0.5</float>
+        <float name="BackParamB">0.5</float>
+        <token name="BackSurface">0</token>
+        <token name="BackSurfaceInput">0</token>
+        <float name="BottomParamA">-0.5</float>
+        <float name="BottomParamB">0.5</float>
+        <token name="BottomSurface">0</token>
+        <token name="BottomSurfaceInput">0</token>
+        <CoordinateFrame name="CFrame">
+          <X>91.5</X>
+          <Y>-5.5</Y>
+          <Z>3.5</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <bool name="CanCollide">true</bool>
+        <bool name="CanQuery">true</bool>
+        <bool name="CanTouch">true</bool>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="CastShadow">true</bool>
+        <string name="CollisionGroup">Default</string>
+        <int name="CollisionGroupId">0</int>
+        <Color3uint8 name="Color3uint8">10724005</Color3uint8>
+        <PhysicalProperties name="CustomPhysicalProperties">
+          <CustomPhysics>false</CustomPhysics>
+        </PhysicalProperties>
+        <bool name="EnableFluidForces">true</bool>
+        <token name="formFactorRaw">1</token>
+        <float name="FrontParamA">-0.5</float>
+        <float name="FrontParamB">0.5</float>
+        <token name="FrontSurface">0</token>
+        <token name="FrontSurfaceInput">0</token>
+        <float name="LeftParamA">-0.5</float>
+        <float name="LeftParamB">0.5</float>
+        <token name="LeftSurface">0</token>
+        <token name="LeftSurfaceInput">0</token>
+        <bool name="Locked">false</bool>
+        <bool name="Massless">false</bool>
+        <token name="Material">256</token>
+        <string name="MaterialVariantSerialized"></string>
+        <CoordinateFrame name="PivotOffset">
+          <X>0</X>
+          <Y>0</Y>
+          <Z>0</Z>
+          <R00>1</R00>
+          <R01>0</R01>
+          <R02>0</R02>
+          <R10>0</R10>
+          <R11>1</R11>
+          <R12>0</R12>
+          <R20>0</R20>
+          <R21>0</R21>
+          <R22>1</R22>
+        </CoordinateFrame>
+        <float name="Reflectance">0</float>
+        <float name="RightParamA">-0.5</float>
+        <float name="RightParamB">0.5</float>
+        <token name="RightSurface">0</token>
+        <token name="RightSurfaceInput">0</token>
+        <int name="RootPriority">0</int>
+        <Vector3 name="RotVelocity">
+          <X>0</X>
+          <Y>0</Y>
+          <Z>0</Z>
+        </Vector3>
+        <bool name="DefinesCapabilities">false</bool>
+        <token name="shape">1</token>
+        <Vector3 name="size">
+          <X>1</X>
+          <Y>1</Y>
+          <Z>1</Z>
+        </Vector3>
+        <int64 name="SourceAssetId">-1</int64>
+        <BinaryString name="Tags"></BinaryString>
+        <float name="TopParamA">-0.5</float>
+        <float name="TopParamB">0.5</float>
+        <token name="TopSurface">0</token>
+        <token name="TopSurfaceInput">0</token>
+        <float name="Transparency">0</float>
+        <Vector3 name="Velocity">
+          <X>0</X>
+          <Y>0</Y>
+          <Z>0</Z>
+        </Vector3>
+      </Properties>
+    </Item>
+    <Item class="Folder" referent="1117">
+      <Properties>
+        <string name="Name">Preview</string>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <int64 name="SourceAssetId">-1</int64>
+        <BinaryString name="Tags"></BinaryString>
+      </Properties>
+    </Item>
+    <Item class="Folder" referent="1118">
+      <Properties>
+        <string name="Name">Towers</string>
+        <BinaryString name="AttributesSerialize"></BinaryString>
+        <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+        <bool name="DefinesCapabilities">false</bool>
+        <int64 name="SourceAssetId">-1</int64>
+        <BinaryString name="Tags"></BinaryString>
+      </Properties>
     </Item>
   </Item>
   <SharedStrings>

@@ -13,8 +13,11 @@ interface TowerInstance extends PVInstance {
 	hitbox: PVInstance
 }
 
+export type TargetMode = "First" | "Last" | "Closest"
+
 type Attributes = TowerInfo & {
 	damageDealt: number
+	targetMode: TargetMode
 }
 
 @Component({
@@ -22,7 +25,11 @@ type Attributes = TowerInfo & {
 	predicate: instance => Flamework.createGuard<TowerName>()(instance.Name),
 	ancestorWhitelist: [Workspace],
 	defaults: {
-		damageDealt: 0
+		damageDealt: 0,
+		damage: 0,
+		attackRate: 0,
+		range: 0,
+		targetMode: "First"
 	}
 })
 export class Tower extends BaseComponent<Attributes, TowerInstance> implements OnStart {
@@ -51,15 +58,15 @@ export class Tower extends BaseComponent<Attributes, TowerInstance> implements O
 			RunService.PreSimulation.Connect(() => {
 				//Find closest enemy and face it
 				const enemies = track.getActiveEnemies()
-				const [closestEnemy, distance] = this.findClosestEnemy(enemies)
+				const targetEnemy = this.findEnemy(this.attributes.targetMode, enemies)
 
 				// Found an enemy within range
-				if (closestEnemy && distance <= this.attributes.range) {
-					this.faceEnemy(closestEnemy)
+				if (targetEnemy) {
+					this.faceEnemy(targetEnemy)
 					// Attack Cooldown
 					const elapsed = os.clock() - this.lastAttack
 					if (elapsed >= this.attributes.attackRate) {
-						this.dealDamage(closestEnemy)
+						this.dealDamage(targetEnemy)
 					}
 				}
 			})
@@ -88,25 +95,53 @@ export class Tower extends BaseComponent<Attributes, TowerInstance> implements O
 		super.destroy()
 	}
 
-	private findClosestEnemy(enemies: Set<Enemy>): [Enemy, number] | [undefined, number] {
-		const towerPosition = this.instance.GetPivot().Position
-		let closest: Enemy | undefined
-		let closestDistance = math.huge
+	/**
+	 * Update to use QuadTrees or Spatial Partitioning
+	 */
+	private findEnemy(targetMode: TargetMode, enemies: Set<Enemy>): Enemy | undefined {
+		if (enemies.size() === 0) return
+		if (targetMode === "Closest") {
+			const towerPosition = this.instance.GetPivot().Position
+			let closestEnemy: Enemy | undefined
+			let closestDistance = this.attributes.range
 
-		enemies.forEach(enemy => {
-			// Ensure enemy is valid
-			if (!enemy.instance || !enemy.instance.Parent) return
+			enemies.forEach(enemy => {
+				// Ensure enemy is valid
+				if (!enemy.instance || !enemy.instance.Parent) return
 
-			// GetPivot works on Models (returns CFrame of the root)
-			const enemyPosition = enemy.instance.GetPivot().Position
-			const distance = towerPosition.sub(enemyPosition).Magnitude
+				// GetPivot works on Models (returns CFrame of the root)
+				const enemyPosition = enemy.instance.GetPivot().Position
+				const distance = towerPosition.sub(enemyPosition).Magnitude
 
-			if (distance < closestDistance) {
-				closest = enemy
-				closestDistance = distance
-			}
-		})
+				if (distance < closestDistance) {
+					closestEnemy = enemy
+					closestDistance = distance
+				}
+			})
 
-		return [closest, closestDistance]
+			return closestEnemy
+		} else {
+			const towerPos = this.instance.GetPivot().Position
+
+			const enemiesInRange = [...enemies].filter(enemy => {
+				const enemyPos = enemy.instance.GetPivot().Position
+				return towerPos.sub(enemyPos).Magnitude <= this.attributes.range
+			})
+
+			if (enemiesInRange.size() === 0) return
+
+			// Pick the enemy with maximum progress (furthest along path)
+			return enemiesInRange.reduce((best, enemy) => {
+				const enemyProgress = os.clock() - enemy.attributes.timeSpawned
+				const bestProgress = os.clock() - best.attributes.timeSpawned
+
+				if (targetMode === "First") {
+					return enemyProgress > bestProgress ? enemy : best
+				} else {
+					// must be "Last"
+					return enemyProgress < bestProgress ? enemy : best
+				}
+			}, enemiesInRange[0])
+		}
 	}
 }

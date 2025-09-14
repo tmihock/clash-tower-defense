@@ -12,8 +12,8 @@ type NumberString = `${number}`
 
 interface TrackInstance extends Instance {
 	waypoints: FolderWith<BasePart>
+	path: FolderWith<BasePart>
 	enemies: Folder
-	towers: Folder
 }
 
 interface Attributes {}
@@ -83,7 +83,7 @@ export class Track extends BaseComponent<Attributes, TrackInstance> implements O
 			this.travelConnections.get(enemy)!.Disconnect()
 			this.travelConnections.delete(enemy)
 		})
-		print(this.waypoints)
+
 		this.travelConnections.set(
 			enemy,
 			RunService.Heartbeat.Connect(dt => this.incrementEnemyPosition(enemy, dt))

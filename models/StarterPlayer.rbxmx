@@ -102,6 +102,17 @@
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
 local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
 local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local Players = _services.Players
+local ReplicatedStorage = _services.ReplicatedStorage
+local RunService = _services.RunService
+local UserInputService = _services.UserInputService
+local Workspace = _services.Workspace
+local Functions = TS.import(script, script.Parent.Parent, "networking").Functions
+local Player = Players.LocalPlayer
+local Camera = Workspace.CurrentCamera
+local towerFolder = ReplicatedStorage.Assets.Towers
+local makePartPreview
 local TowerController
 do
 	TowerController = setmetatable({}, {
@@ -115,10 +126,117 @@ do
 		return self:constructor(...) or self
 	end
 	function TowerController:constructor()
+		self.isPlacing = false
+		self.selectedTower = "Barbarian"
 	end
 	function TowerController:onStart()
+		UserInputService.InputBegan:Connect(function(input, gpe)
+			if gpe then
+				return nil
+			end
+			if input.KeyCode == Enum.KeyCode.E then
+				self:togglePlacing()
+			end
+			if input.UserInputType == Enum.UserInputType.MouseButton1 and self.isPlacing then
+				self:confirmPlacement()
+			end
+		end)
+	end
+	function TowerController:stopPlacing()
+		self.isPlacing = false
+		local _result = self.previewModel
+		if _result ~= nil then
+			_result:Destroy()
+		end
 	end
 	function TowerController:startPlacing()
+		local _arg0 = not self.isPlacing
+		local _arg1 = `{"[src/client/controllers/TowerController.ts:42]"} {"!this.isPlacing"}: {"Player is already placing"}`
+		assert(_arg0, _arg1)
+		self.isPlacing = true
+		local preview = towerFolder[self.selectedTower]:Clone()
+		self.previewModel = preview
+		preview.Parent = Workspace
+		local _exp = preview:GetDescendants()
+		-- ▼ ReadonlyArray.filter ▼
+		local _newValue = {}
+		local _callback = function(i)
+			return i:IsA("BasePart")
+		end
+		local _length = 0
+		for _k, _v in _exp do
+			if _callback(_v, _k - 1, _exp) == true then
+				_length += 1
+				_newValue[_length] = _v
+			end
+		end
+		-- ▲ ReadonlyArray.filter ▲
+		for _k, _v in _newValue do
+			makePartPreview(_v, _k - 1, _newValue)
+		end
+		self.mouseStepped = RunService.RenderStepped:Connect(function(dt)
+			local pos = self:mouseToTowerPos()
+			if pos then
+				preview:MoveTo(pos)
+			end
+		end)
+	end
+	function TowerController:confirmPlacement()
+		local _isPlacing = self.isPlacing
+		local _arg1 = `{"[src/client/controllers/TowerController.ts:63]"} {"this.isPlacing"}: Assertion failed!`
+		assert(_isPlacing, _arg1)
+		local placementPos = self:mouseToTowerPos()
+		local _arg1_1 = `{"[src/client/controllers/TowerController.ts:65]"} {"placementPos"}: {`this.mouseToTowerPos({self.selectedTower}) returned undefined`}`
+		assert(placementPos, _arg1_1)
+		local _clone = self.previewModel
+		if _clone ~= nil then
+			_clone = _clone:Clone()
+		end
+		local clone = _clone
+		Functions.placeTower:invoke(placementPos, self.selectedTower):andThen(function(wasPlaced)
+			if wasPlaced then
+				local _result = clone
+				if _result ~= nil then
+					_result:Destroy()
+				end
+			else
+				-- Failed, make clone red then destroy or seomthing
+				local _result = clone
+				if _result ~= nil then
+					_result:Destroy()
+				end
+			end
+		end)
+	end
+	function TowerController:mouseToTowerPos()
+		local _binding = UserInputService:GetMouseLocation()
+		local X = _binding.X
+		local Y = _binding.Y
+		local _binding_1 = Camera:ViewportPointToRay(X, Y)
+		local Origin = _binding_1.Origin
+		local Direction = _binding_1.Direction
+		local rayParams = RaycastParams.new()
+		rayParams.FilterType = Enum.RaycastFilterType.Exclude
+		rayParams.FilterDescendantsInstances = { Workspace.Preview, Workspace.Live, Workspace.Towers }
+		local rayResult = Workspace:Raycast(Origin, Direction * 1000, rayParams)
+		if rayResult then
+			local _binding_2 = rayResult.Position
+			local X = _binding_2.X
+			local Z = _binding_2.Z
+			local Y = rayResult.Position.Y + towerFolder[self.selectedTower].hitbox.Size.Y / 2
+			return Vector3.new(X, Y, Z)
+		end
+	end
+	function TowerController:togglePlacing(toggle)
+		if toggle == nil then
+			toggle = not self.isPlacing
+		end
+		if self.isPlacing then
+			self:stopPlacing()
+		else
+			self:startPlacing()
+		end
+		return self.isPlacing
 	end
 	do
 		-- (Flamework) TowerController metadata
@@ -128,6 +246,11 @@ do
 end
 -- (Flamework) TowerController decorators
 Reflect.decorate(TowerController, "$:flamework@Controller", Controller, { {} })
+function makePartPreview(part)
+	part.Transparency = 0.5
+	part.CanCollide = false
+	part.CanQuery = false
+end
 return {
 	TowerController = TowerController,
 }
@@ -192,6 +315,7 @@ print("[src/client/main.client.ts:9]", "Flamework client ignited!")
             <bool name="DefinesCapabilities">false</bool>
             <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local t = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out", "prelude").t
 local _networking = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "networking")
 local GlobalEvents = _networking.GlobalEvents
 local GlobalFunctions = _networking.GlobalFunctions
@@ -207,8 +331,10 @@ local Events = GlobalEvents:createClient({}, {
 local Functions = GlobalFunctions:createClient({}, {
 	incomingIds = {},
 	incoming = {},
-	outgoingIds = {},
-	outgoing = {},
+	outgoingIds = { "placeTower" },
+	outgoing = {
+		placeTower = t.boolean,
+	},
 	namespaceIds = {},
 	namespaces = {},
 })

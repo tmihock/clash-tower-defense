@@ -1,4 +1,5 @@
 import { Networking } from "@flamework/networking"
+import { TowerName } from "./config/TowerConfig"
 
 // Client -> Server events
 interface ServerEvents {}
@@ -7,7 +8,9 @@ interface ServerEvents {}
 interface ClientEvents {}
 
 // Client -> Server -> Client functions
-interface ServerFunctions {}
+interface ServerFunctions {
+	placeTower(pos: Vector3, tower: TowerName): boolean
+}
 
 // Server -> Client -> Server functions
 // Unsafe

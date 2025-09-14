@@ -255,6 +255,7 @@ interface Workspace extends Model {
 						OriginalPosition: Vector3Value;
 					};
 					OriginalSize: Vector3Value;
+					AccessoryWeld: Weld;
 				};
 			};
 			LeftUpperArm: MeshPart & {
@@ -363,10 +364,13 @@ interface Workspace extends Model {
 		};
 	};
 	Camera: Camera;
+	Towers: Folder;
 	Spawns: Folder & {
 		SpawnLocation: SpawnLocation;
 	};
 	Live: Folder;
+	Preview: Folder;
+	tPos: Part;
 	TRACK: Model & {
 		towers: Folder;
 		enemies: Folder;

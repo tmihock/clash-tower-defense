@@ -12,13 +12,15 @@ const enemyFolder = ReplicatedStorage.Assets.Enemies
 export class EnemyService implements OnStart {
 	onStart() {
 		task.wait(3)
-		const Components = Dependency<Components>()
-		const track = Components.getAllComponents<Track>()[0]
-		this.spawnEnemy(track, "Skeleton")
+		for (const i of $range(1, 100)) {
+			task.wait(0.5)
+			this.spawnEnemy("Skeleton")
+		}
 	}
 
-	public spawnEnemy(track: Track, enemy: EnemyName) {
+	public spawnEnemy(enemy: EnemyName) {
 		const Components = Dependency<Components>()
+		const track = Components.getAllComponents<Track>()[0]
 
 		const newEnemy = enemyFolder[enemy]!.Clone()
 		newEnemy.Parent = track.instance.enemies
