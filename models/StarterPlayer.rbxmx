@@ -259,8 +259,194 @@ return {
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
+          <Item class="ModuleScript" referent="6">
+            <Properties>
+              <string name="Name">TrackController</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local CollectionService = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services").CollectionService
+local TAG_TRACK = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "constants").TAG_TRACK
+local TrackController
+do
+	TrackController = setmetatable({}, {
+		__tostring = function()
+			return "TrackController"
+		end,
+	})
+	TrackController.__index = TrackController
+	function TrackController.new(...)
+		local self = setmetatable({}, TrackController)
+		return self:constructor(...) or self
+	end
+	function TrackController:constructor()
+		self.waypoints = {}
+		self.trackLength = -1
+		self.trackInstance = nil
+	end
+	function TrackController:onInit()
+		--[[
+			*
+			         * Change to wait for all waypoints to load in
+			         
+		]]
+		task.wait(1)
+	end
+	function TrackController:onStart()
+		local trackInstance = CollectionService:GetTagged(TAG_TRACK)[1]
+		local _exp = trackInstance.waypoints:GetChildren()
+		table.sort(_exp, function(a, b)
+			return tonumber(a.Name) < tonumber(b.Name)
+		end)
+		-- ▼ ReadonlyArray.map ▼
+		local _newValue = table.create(#_exp)
+		local _callback = function(i)
+			return i.Position
+		end
+		for _k, _v in _exp do
+			_newValue[_k] = _callback(_v, _k - 1, _exp)
+		end
+		-- ▲ ReadonlyArray.map ▲
+		self.waypoints = _newValue
+		local total = 0
+		for i = 0, #self.waypoints - 2 do
+			local _exp_1 = self.waypoints[i + 2]
+			local _arg0 = self.waypoints[i + 1]
+			total += (_exp_1 - _arg0).Magnitude
+		end
+		self.trackLength = total
+		self.trackInstance = trackInstance
+	end
+	function TrackController:getWaypoints()
+		return self.waypoints
+	end
+	function TrackController:getTrack()
+		return self.trackInstance
+	end
+	function TrackController:getTrackLength()
+		return self.trackLength
+	end
+	function TrackController:getPositionOnTrack(speed, t)
+		local d = speed * t
+		local distAccum = 0
+		for i = 0, #self.waypoints - 2 do
+			local a = self.waypoints[i + 1]
+			local b = self.waypoints[i + 2]
+			local L = (b - a).Magnitude
+			if d <= distAccum + L then
+				local segDist = d - distAccum
+				local alpha = segDist / L
+				return a:Lerp(b, alpha)
+			end
+			distAccum += L
+		end
+		-- Clamp to the last waypoint if we've passed the end
+		return self.waypoints[#self.waypoints]
+	end
+	do
+		-- (Flamework) TrackController metadata
+		Reflect.defineMetadata(TrackController, "identifier", "client/controllers/TrackController@TrackController")
+		Reflect.defineMetadata(TrackController, "flamework:implements", { "$:flamework@OnInit", "$:flamework@OnStart" })
+	end
+end
+-- (Flamework) TrackController decorators
+Reflect.decorate(TrackController, "$:flamework@Controller", Controller, { {} })
+return {
+	TrackController = TrackController,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="7">
+            <Properties>
+              <string name="Name">EnemyController</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local Enemy = TS.import(script, script.Parent.Parent, "classes", "Enemy").Enemy
+local Events = TS.import(script, script.Parent.Parent, "networking").Events
+local EnemyController
+do
+	EnemyController = setmetatable({}, {
+		__tostring = function()
+			return "EnemyController"
+		end,
+	})
+	EnemyController.__index = EnemyController
+	function EnemyController.new(...)
+		local self = setmetatable({}, EnemyController)
+		return self:constructor(...) or self
+	end
+	function EnemyController:constructor()
+		self.enemies = {}
+	end
+	function EnemyController:onStart()
+		Events.enemySpawned:connect(function(i, e)
+			return self:onEnemySpawned(i, e)
+		end)
+		Events.enemyDeleted:connect(function(i)
+			return self:onEnemyDeleted(i)
+		end)
+		Events.updateEnemyHealth:connect(function(i, v)
+			return self:onEnemyHealthUpdated(i, v)
+		end)
+	end
+	function EnemyController:onEnemySpawned(id, enemy)
+		local newEnemy = Enemy.new(enemy)
+		local _enemies = self.enemies
+		local _id = id
+		_enemies[_id] = newEnemy
+	end
+	function EnemyController:onEnemyDeleted(id)
+		local _enemies = self.enemies
+		local _id = id
+		_enemies[_id]:destroy()
+		local _enemies_1 = self.enemies
+		local _id_1 = id
+		_enemies_1[_id_1] = nil
+	end
+	function EnemyController:onEnemyHealthUpdated(id, value)
+		print(self.enemies, id)
+		local _enemies = self.enemies
+		local _id = id
+		_enemies[_id]:setHealth(value)
+	end
+	do
+		-- (Flamework) EnemyController metadata
+		Reflect.defineMetadata(EnemyController, "identifier", "client/controllers/EnemyController@EnemyController")
+		Reflect.defineMetadata(EnemyController, "flamework:implements", { "$:flamework@OnStart" })
+	end
+end
+-- (Flamework) EnemyController decorators
+Reflect.decorate(EnemyController, "$:flamework@Controller", Controller, { {} })
+return {
+	EnemyController = EnemyController,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
         </Item>
-        <Item class="LocalScript" referent="6">
+        <Item class="LocalScript" referent="8">
           <Properties>
             <string name="Name">main</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -285,7 +471,7 @@ print("[src/client/main.client.ts:9]", "Flamework client ignited!")
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="7">
+        <Item class="LocalScript" referent="9">
           <Properties>
             <string name="Name">setCore</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -303,7 +489,7 @@ print("[src/client/main.client.ts:9]", "Flamework client ignited!")
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="ModuleScript" referent="8">
+        <Item class="ModuleScript" referent="10">
           <Properties>
             <string name="Name">networking</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -320,8 +506,13 @@ local _networking = TS.import(script, game:GetService("ReplicatedStorage"), "TS"
 local GlobalEvents = _networking.GlobalEvents
 local GlobalFunctions = _networking.GlobalFunctions
 local Events = GlobalEvents:createClient({}, {
-	incomingIds = {},
-	incoming = {},
+	incomingIds = { "enemySpawned", "enemyDeleted", "updateEnemyHealth", "syncEnemyTime" },
+	incoming = {
+		enemySpawned = { { t.number, t.literal("Skeleton", "Armored_Skeleton") }, nil },
+		enemyDeleted = { { t.number }, nil },
+		updateEnemyHealth = { { t.number, t.number }, nil },
+		syncEnemyTime = { { t.number, t.number }, nil },
+	},
 	incomingUnreliable = {},
 	outgoingIds = {},
 	outgoingUnreliable = {},
@@ -347,7 +538,7 @@ return {
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="Folder" referent="9">
+        <Item class="Folder" referent="11">
           <Properties>
             <string name="Name">classes</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -356,8 +547,92 @@ return {
             <int64 name="SourceAssetId">-1</int64>
             <BinaryString name="Tags"></BinaryString>
           </Properties>
+          <Item class="ModuleScript" referent="12">
+            <Properties>
+              <string name="Name">Enemy</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Flamework = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Flamework
+local EnemyConfig = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "config", "EnemyConfig").EnemyConfig
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local ReplicatedStorage = _services.ReplicatedStorage
+local RunService = _services.RunService
+local Workspace = _services.Workspace
+local enemyFolder = ReplicatedStorage.Assets.Enemies
+local Enemy
+do
+	Enemy = setmetatable({}, {
+		__tostring = function()
+			return "Enemy"
+		end,
+	})
+	Enemy.__index = Enemy
+	function Enemy.new(...)
+		local self = setmetatable({}, Enemy)
+		return self:constructor(...) or self
+	end
+	function Enemy:constructor(enemyName)
+		self.timeSpawned = os.clock()
+		self.info = EnemyConfig[enemyName]
+		self.health = self.info.health
+		self.instance = enemyFolder[enemyName]:Clone()
+		self.instance.Parent = Workspace.Enemies
+		self.trackController = Flamework.resolveDependency("client/controllers/TrackController@TrackController")
+		self:startTravel()
+	end
+	function Enemy:startTravel()
+		RunService.RenderStepped:Connect(function(dt)
+			local _binding = self.info
+			local speed = _binding.speed
+			local elapsed = os.clock() - self.timeSpawned
+			local pos = self.trackController:getPositionOnTrack(speed, elapsed)
+			-- Approximate movement direction using a small time step
+			local futurePos = self.trackController:getPositionOnTrack(speed, elapsed + dt)
+			local dir = futurePos - pos
+			self:moveTo(pos, dir)
+		end)
+	end
+	function Enemy:moveTo(pos, lookDir)
+		if not lookDir or lookDir.Magnitude <= 0 then
+			self.instance:PivotTo(CFrame.new(pos))
+			return nil
+		end
+		-- Current orientation
+		local current = self.instance:GetPivot()
+		-- Target orientation (facing movement direction)
+		local _exp = pos
+		local _pos = pos
+		local _unit = lookDir.Unit
+		local target = CFrame.lookAt(_exp, _pos + _unit)
+		-- Adjust the alpha to control turn speed (closer to 1 = faster snap)
+		local alpha = 0.1
+		local smoothed = current:Lerp(target, alpha)
+		self.instance:PivotTo(smoothed)
+	end
+	function Enemy:setHealth(value)
+		self.health = value
+	end
+	function Enemy:destroy()
+		self.instance:Destroy()
+	end
+end
+return {
+	Enemy = Enemy,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
         </Item>
-        <Item class="Folder" referent="10">
+        <Item class="Folder" referent="13">
           <Properties>
             <string name="Name">ui</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -368,7 +643,7 @@ return {
           </Properties>
         </Item>
       </Item>
-      <Item class="LocalScript" referent="11">
+      <Item class="LocalScript" referent="14">
         <Properties>
           <string name="Name">RbxCharacterSounds</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -822,7 +1097,7 @@ Players.PlayerRemoving:Connect(playerRemoving)
           <int64 name="SourceAssetId">-1</int64>
           <BinaryString name="Tags"></BinaryString>
         </Properties>
-        <Item class="ModuleScript" referent="12">
+        <Item class="ModuleScript" referent="15">
           <Properties>
             <string name="Name">AtomicBinding</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1115,7 +1390,7 @@ return AtomicBinding
         </Item>
       </Item>
     </Item>
-    <Item class="StarterCharacterScripts" referent="13">
+    <Item class="StarterCharacterScripts" referent="16">
       <Properties>
         <string name="Name">StarterCharacterScripts</string>
         <BinaryString name="AttributesSerialize"></BinaryString>
