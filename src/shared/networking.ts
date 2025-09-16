@@ -8,15 +8,20 @@ export interface EnemySyncInfo {
 	pos: Vector3
 }
 
+export type TargetMode = "First" | "Last" | "Closest"
 export interface TowerSyncInfo {
 	id: number
 	damageDealt: number
 }
 
-export type TargetMode = "First" | "Last" | "Closest"
+export type EquipBar = TowerName[]
 
 // Client -> Server events
-interface ServerEvents {}
+interface ServerEvents {
+	// Inventory / Equip
+	setEquipBar(equipBar: EquipBar): void
+	updateEquipBar(index: number, value: TowerName): void
+}
 
 // Server -> Client events
 interface ClientEvents {
@@ -32,6 +37,10 @@ interface ClientEvents {
 	setTowerTargetMode(id: number, targetMode: TargetMode): void
 	towerAttackedEnemy(towerId: number, enemyId: number): void
 	syncTowers(info: TowerSyncInfo[]): void
+
+	// Inventory / Equip
+	setEquipBar(equipBar: EquipBar): void
+	updateEquipBar(index: number, value: TowerName): void
 }
 
 // Client -> Server -> Client functions

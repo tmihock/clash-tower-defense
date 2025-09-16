@@ -20,7 +20,7 @@ const defaultUnlocks = ["Barbarian"] satisfies TowerName[]
 export class InventoryService implements DataIO {
 	private playerUnlockedTowers = new Map<Player, Set<TowerName>>()
 
-	public hasTower(player: Player, tower: TowerName): boolean {
+	public playerHasTower(player: Player, tower: TowerName): boolean {
 		return this.playerUnlockedTowers.get(player)!.has(tower)
 	}
 

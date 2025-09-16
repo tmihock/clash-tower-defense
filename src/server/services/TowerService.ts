@@ -43,7 +43,9 @@ export class TowerService implements OnStart {
 	}
 
 	private canPlace(player: Player, pos: Vector3, tower: TowerName): boolean {
-		return this.posNotOnTrackOrTower(pos, tower) && this.inventoryService.hasTower(player, tower)
+		return (
+			this.posNotOnTrackOrTower(pos, tower) && this.inventoryService.playerHasTower(player, tower)
+		)
 	}
 
 	private posNotOnTrackOrTower(pos: Vector3, tower: TowerName): boolean {
