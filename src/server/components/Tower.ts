@@ -3,11 +3,13 @@ import { Component, BaseComponent, Components } from "@flamework/components"
 import { TowerConfig, TowerInfo, TowerName } from "shared/config/TowerConfig"
 import { TAG_TOWER } from "shared/constants"
 import { RunService, Workspace } from "@rbxts/services"
-import { Enemy } from "./Enemy"
 import Maid from "@rbxts/maid"
 import { clock } from "shared/types"
 import { Track } from "./Track"
 import { $assert } from "rbxts-transform-debug"
+import { TrackService } from "server/services/TrackService"
+import { Enemy } from "server/classes/Enemy"
+import { EnemyService } from "server/services/EnemyService"
 
 interface TowerInstance extends PVInstance {
 	hitbox: PVInstance
@@ -38,7 +40,10 @@ export class Tower extends BaseComponent<Attributes, TowerInstance> implements O
 
 	private lastAttack: clock = 0
 
-	constructor() {
+	constructor(
+		private trackService: TrackService,
+		private enemyService: EnemyService
+	) {
 		super()
 		const { range, damage, attackRate } = TowerConfig[this.towerType]
 		const attributes = this.attributes
@@ -48,16 +53,10 @@ export class Tower extends BaseComponent<Attributes, TowerInstance> implements O
 	}
 
 	onStart() {
-		const tracks = Dependency<Components>().getAllComponents<Track>()
-		$assert(
-			tracks.size() === 1,
-			`${tracks.size()} track components exist. If amount is 0, a tower is being placed without a track being created.`
-		) // Track component is a singleton
-		const track = tracks[0]
 		this.maid.GiveTask(
 			RunService.PreSimulation.Connect(() => {
 				//Find closest enemy and face it
-				const enemies = track.getActiveEnemies()
+				const enemies = this.enemyService.getEnemies()
 				const targetEnemy = this.findEnemy(this.attributes.targetMode, enemies)
 
 				// Found an enemy within range
@@ -74,7 +73,7 @@ export class Tower extends BaseComponent<Attributes, TowerInstance> implements O
 	}
 
 	private faceEnemy(enemy: Enemy) {
-		const enemyPos = enemy.instance.GetPivot().Position
+		const enemyPos = enemy.position
 		const towerPos = this.instance.GetPivot().Position
 
 		// Ignore Y so it only rotates horizontally
@@ -98,20 +97,17 @@ export class Tower extends BaseComponent<Attributes, TowerInstance> implements O
 	/**
 	 * Update to use QuadTrees or Spatial Partitioning
 	 */
-	private findEnemy(targetMode: TargetMode, enemies: Set<Enemy>): Enemy | undefined {
+	private findEnemy(targetMode: TargetMode, enemies: Map<number, Enemy>): Enemy | undefined {
 		if (enemies.size() === 0) return
 		if (targetMode === "Closest") {
-			const towerPosition = this.instance.GetPivot().Position
+			const towerPos = this.instance.GetPivot().Position
 			let closestEnemy: Enemy | undefined
 			let closestDistance = this.attributes.range
 
 			enemies.forEach(enemy => {
-				// Ensure enemy is valid
-				if (!enemy.instance || !enemy.instance.Parent) return
-
 				// GetPivot works on Models (returns CFrame of the root)
-				const enemyPosition = enemy.instance.GetPivot().Position
-				const distance = towerPosition.sub(enemyPosition).Magnitude
+				const enemyPos = enemy.position
+				const distance = towerPos.sub(enemyPos).Magnitude
 
 				if (distance < closestDistance) {
 					closestEnemy = enemy
@@ -123,17 +119,20 @@ export class Tower extends BaseComponent<Attributes, TowerInstance> implements O
 		} else {
 			const towerPos = this.instance.GetPivot().Position
 
-			const enemiesInRange = [...enemies].filter(enemy => {
-				const enemyPos = enemy.instance.GetPivot().Position
-				return towerPos.sub(enemyPos).Magnitude <= this.attributes.range
-			})
+			const enemiesInRange = [...enemies]
+				.map(v => v[1])
+				.filter(v => v.getHealth() > 0)
+				.filter(enemy => {
+					const enemyPos = enemy.position
+					return towerPos.sub(enemyPos).Magnitude <= this.attributes.range
+				})
 
 			if (enemiesInRange.size() === 0) return
 
 			// Pick the enemy with maximum progress (furthest along path)
 			return enemiesInRange.reduce((best, enemy) => {
-				const enemyProgress = os.clock() - enemy.attributes.timeSpawned
-				const bestProgress = os.clock() - best.attributes.timeSpawned
+				const enemyProgress = os.clock() - enemy.timeSpawned
+				const bestProgress = os.clock() - best.timeSpawned
 
 				if (targetMode === "First") {
 					return enemyProgress > bestProgress ? enemy : best

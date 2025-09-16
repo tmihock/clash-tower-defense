@@ -6,12 +6,16 @@ import { Track } from "server/components/Track"
 import { Tower } from "server/components/Tower"
 import { Functions } from "server/networking"
 import { InventoryService } from "./InventoryService"
+import { TrackService } from "./TrackService"
 
 const towerFolder = ReplicatedStorage.Assets.Towers
 
 @Service({})
 export class TowerService implements OnStart {
-	constructor(private inventoryService: InventoryService) {}
+	constructor(
+		private inventoryService: InventoryService,
+		private trackService: TrackService
+	) {}
 
 	onStart() {
 		task.wait(1)
@@ -34,7 +38,7 @@ export class TowerService implements OnStart {
 	}
 
 	private posNotOnTrackOrTower(pos: Vector3, tower: TowerName): boolean {
-		const track = Dependency<Components>().getAllComponents<Track>()[0]
+		const track = this.trackService.getTrack()
 		const path = track.instance.path
 
 		const { X, Z } = towerFolder[tower].hitbox.Size
@@ -56,14 +60,13 @@ export class TowerService implements OnStart {
 	}
 
 	public spawnTower(pos: Vector3, tower: TowerName) {
-		const Components = Dependency<Components>()
-		const track = Components.getAllComponents<Track>()[0]
+		const track = this.trackService.getTrack()
 
 		const newTower = towerFolder[tower]!.Clone()
 		newTower.PivotTo(new CFrame(pos))
 		newTower.Parent = Workspace.Towers
 
-		const towerComponent = Components.getComponent<Tower>(newTower)
+		const towerComponent = Dependency<Components>().getComponent<Tower>(newTower)
 		assert(towerComponent, `Component for "${newTower.GetFullName()}" not found.`)
 
 		track.addTower(towerComponent)
