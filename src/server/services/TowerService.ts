@@ -3,18 +3,27 @@ import { TowerConfig, TowerName } from "shared/config/TowerConfig"
 import { ReplicatedStorage, Workspace } from "@rbxts/services"
 import { Components } from "@flamework/components"
 import { Track } from "server/components/Track"
-import { Tower } from "server/components/Tower"
-import { Functions } from "server/networking"
 import { InventoryService } from "./InventoryService"
 import { TrackService } from "./TrackService"
+import { Tower_S } from "server/classes/Tower_S"
+import { EnemyService } from "./EnemyService"
+import { Events, Functions } from "server/networking"
 
 const towerFolder = ReplicatedStorage.Assets.Towers
 
+let currentId = 0
+function nextId(): number {
+	return currentId++
+}
+
 @Service({})
 export class TowerService implements OnStart {
+	private towers = new Map<number, Tower_S>()
+
 	constructor(
 		private inventoryService: InventoryService,
-		private trackService: TrackService
+		private trackService: TrackService,
+		private enemyService: EnemyService
 	) {}
 
 	onStart() {
@@ -59,16 +68,19 @@ export class TowerService implements OnStart {
 		return hits.size() === 0
 	}
 
+	public destroyTower(id: number) {
+		const tower = this.towers.get(id)
+		this.towers.delete(id)
+		tower?.destroy()
+		Events.towerDeleted.broadcast(id)
+	}
+
 	public spawnTower(pos: Vector3, tower: TowerName) {
-		const track = this.trackService.getTrack()
+		const id = nextId()
+		const newTower = new Tower_S(tower, id, pos, this.enemyService)
 
-		const newTower = towerFolder[tower]!.Clone()
-		newTower.PivotTo(new CFrame(pos))
-		newTower.Parent = Workspace.Towers
+		Events.towerPlaced.broadcast(id, pos, tower)
 
-		const towerComponent = Dependency<Components>().getComponent<Tower>(newTower)
-		assert(towerComponent, `Component for "${newTower.GetFullName()}" not found.`)
-
-		track.addTower(towerComponent)
+		this.towers.set(id, newTower)
 	}
 }

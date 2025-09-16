@@ -108,7 +108,10 @@ local ReplicatedStorage = _services.ReplicatedStorage
 local RunService = _services.RunService
 local UserInputService = _services.UserInputService
 local Workspace = _services.Workspace
-local Functions = TS.import(script, script.Parent.Parent, "networking").Functions
+local Tower_C = TS.import(script, script.Parent.Parent, "classes", "Tower_C").Tower_C
+local _networking = TS.import(script, script.Parent.Parent, "networking")
+local Events = _networking.Events
+local Functions = _networking.Functions
 local Player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local towerFolder = ReplicatedStorage.Assets.Towers
@@ -125,9 +128,11 @@ do
 		local self = setmetatable({}, TowerController)
 		return self:constructor(...) or self
 	end
-	function TowerController:constructor()
+	function TowerController:constructor(enemyController)
+		self.enemyController = enemyController
 		self.isPlacing = false
 		self.selectedTower = "Barbarian"
+		self.towers = {}
 	end
 	function TowerController:onStart()
 		UserInputService.InputBegan:Connect(function(input, gpe)
@@ -135,23 +140,63 @@ do
 				return nil
 			end
 			if input.KeyCode == Enum.KeyCode.E then
-				self:togglePlacing()
+				self:togglePlacingTower()
 			end
 			if input.UserInputType == Enum.UserInputType.MouseButton1 and self.isPlacing then
-				self:confirmPlacement()
+				self:confirmTowerPlacement()
 			end
 		end)
+		Events.towerPlaced:connect(function(i, p, t)
+			return self:onTowerPlaced(i, p, t)
+		end)
+		Events.towerDeleted:connect(function(i)
+			return self:onTowerDeleted(i)
+		end)
+		Events.towerAttackedEnemy:connect(function(t, e)
+			return self:onTowerAttackedEnemy(t, e)
+		end)
+		Events.setTowerTargetMode:connect(function(i, t)
+			return self:onTowerTargetModeChanged(i, t)
+		end)
 	end
-	function TowerController:stopPlacing()
+	function TowerController:onTowerTargetModeChanged(id, mode)
+		local _towers = self.towers
+		local _id = id
+		local tower = _towers[_id]
+		tower.targetMode = mode
+	end
+	function TowerController:onTowerPlaced(id, pos, tower)
+		local newTower = Tower_C.new(id, pos, tower, self.enemyController)
+		local _towers = self.towers
+		local _id = id
+		_towers[_id] = newTower
+	end
+	function TowerController:onTowerDeleted(id)
+		local _towers = self.towers
+		local _id = id
+		_towers[_id]:destroy()
+		local _towers_1 = self.towers
+		local _id_1 = id
+		_towers_1[_id_1] = nil
+	end
+	function TowerController:onTowerAttackedEnemy(towerId, enemyId)
+		local _towers = self.towers
+		local _towerId = towerId
+		local tower = _towers[_towerId]
+		if tower then
+			tower.damageDealt += tower.info.damage
+		end
+	end
+	function TowerController:stopPlacingTower()
 		self.isPlacing = false
 		local _result = self.previewModel
 		if _result ~= nil then
 			_result:Destroy()
 		end
 	end
-	function TowerController:startPlacing()
+	function TowerController:startPlacingTower()
 		local _arg0 = not self.isPlacing
-		local _arg1 = `{"[src/client/controllers/TowerController.ts:42]"} {"!this.isPlacing"}: {"Player is already placing"}`
+		local _arg1 = `{"[src/client/controllers/TowerController.ts:76]"} {"!this.isPlacing"}: {"Player is already placing"}`
 		assert(_arg0, _arg1)
 		self.isPlacing = true
 		local preview = towerFolder[self.selectedTower]:Clone()
@@ -181,12 +226,12 @@ do
 			end
 		end)
 	end
-	function TowerController:confirmPlacement()
+	function TowerController:confirmTowerPlacement()
 		local _isPlacing = self.isPlacing
-		local _arg1 = `{"[src/client/controllers/TowerController.ts:63]"} {"this.isPlacing"}: Assertion failed!`
+		local _arg1 = `{"[src/client/controllers/TowerController.ts:97]"} {"this.isPlacing"}: Assertion failed!`
 		assert(_isPlacing, _arg1)
 		local placementPos = self:mouseToTowerPos()
-		local _arg1_1 = `{"[src/client/controllers/TowerController.ts:65]"} {"placementPos"}: {`this.mouseToTowerPos({self.selectedTower}) returned undefined`}`
+		local _arg1_1 = `{"[src/client/controllers/TowerController.ts:99]"} {"placementPos"}: {`this.mouseToTowerPos({self.selectedTower}) returned undefined`}`
 		assert(placementPos, _arg1_1)
 		local _clone = self.previewModel
 		if _clone ~= nil then
@@ -227,20 +272,21 @@ do
 			return Vector3.new(X, Y, Z)
 		end
 	end
-	function TowerController:togglePlacing(toggle)
+	function TowerController:togglePlacingTower(toggle)
 		if toggle == nil then
 			toggle = not self.isPlacing
 		end
 		if self.isPlacing then
-			self:stopPlacing()
+			self:stopPlacingTower()
 		else
-			self:startPlacing()
+			self:startPlacingTower()
 		end
 		return self.isPlacing
 	end
 	do
 		-- (Flamework) TowerController metadata
 		Reflect.defineMetadata(TowerController, "identifier", "client/controllers/TowerController@TowerController")
+		Reflect.defineMetadata(TowerController, "flamework:parameters", { "client/controllers/EnemyController@EnemyController" })
 		Reflect.defineMetadata(TowerController, "flamework:implements", { "$:flamework@OnStart" })
 	end
 end
@@ -381,7 +427,7 @@ return {
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
 local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
 local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
-local Enemy = TS.import(script, script.Parent.Parent, "classes", "Enemy").Enemy
+local Enemy_C = TS.import(script, script.Parent.Parent, "classes", "Enemy_C").Enemy_C
 local Events = TS.import(script, script.Parent.Parent, "networking").Events
 local EnemyController
 do
@@ -409,8 +455,26 @@ do
 			return self:onEnemyHealthUpdated(i, v)
 		end)
 	end
+	function EnemyController:getEnemies()
+		local _array = {}
+		local _length = #_array
+		for _k, _v in self.enemies do
+			_length += 1
+			_array[_length] = { _k, _v }
+		end
+		-- ▼ ReadonlyArray.map ▼
+		local _newValue = table.create(#_array)
+		local _callback = function(v)
+			return v[2]
+		end
+		for _k, _v in _array do
+			_newValue[_k] = _callback(_v, _k - 1, _array)
+		end
+		-- ▲ ReadonlyArray.map ▲
+		return _newValue
+	end
 	function EnemyController:onEnemySpawned(id, enemy)
-		local newEnemy = Enemy.new(enemy)
+		local newEnemy = Enemy_C.new(id, enemy)
 		local _enemies = self.enemies
 		local _id = id
 		_enemies[_id] = newEnemy
@@ -427,7 +491,7 @@ do
 		print(self.enemies, id)
 		local _enemies = self.enemies
 		local _id = id
-		_enemies[_id]:setHealth(value)
+		_enemies[_id].health = value
 	end
 	do
 		-- (Flamework) EnemyController metadata
@@ -506,12 +570,24 @@ local _networking = TS.import(script, game:GetService("ReplicatedStorage"), "TS"
 local GlobalEvents = _networking.GlobalEvents
 local GlobalFunctions = _networking.GlobalFunctions
 local Events = GlobalEvents:createClient({}, {
-	incomingIds = { "enemySpawned", "enemyDeleted", "updateEnemyHealth", "syncEnemyTime" },
+	incomingIds = { "enemySpawned", "enemyDeleted", "updateEnemyHealth", "syncEnemies", "towerPlaced", "towerDeleted", "setTowerTargetMode", "towerAttackedEnemy", "syncTowers" },
 	incoming = {
 		enemySpawned = { { t.number, t.literal("Skeleton", "Armored_Skeleton") }, nil },
 		enemyDeleted = { { t.number }, nil },
 		updateEnemyHealth = { { t.number, t.number }, nil },
-		syncEnemyTime = { { t.number, t.number }, nil },
+		syncEnemies = { { t.array(t.interface({
+			id = t.number,
+			elapsed = t.number,
+			pos = t.Vector3,
+		})) }, nil },
+		towerPlaced = { { t.number, t.Vector3, t.literal("Barbarian") }, nil },
+		towerDeleted = { { t.number }, nil },
+		setTowerTargetMode = { { t.number, t.literalList({ "First", "Last", "Closest" }) }, nil },
+		towerAttackedEnemy = { { t.number, t.number }, nil },
+		syncTowers = { { t.array(t.interface({
+			id = t.number,
+			damageDealt = t.number,
+		})) }, nil },
 	},
 	incomingUnreliable = {},
 	outgoingIds = {},
@@ -549,7 +625,7 @@ return {
           </Properties>
           <Item class="ModuleScript" referent="12">
             <Properties>
-              <string name="Name">Enemy</string>
+              <string name="Name">Enemy_C</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
               <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
               <ContentId name="LinkedSource">
@@ -566,19 +642,21 @@ local ReplicatedStorage = _services.ReplicatedStorage
 local RunService = _services.RunService
 local Workspace = _services.Workspace
 local enemyFolder = ReplicatedStorage.Assets.Enemies
-local Enemy
+local Enemy_C
 do
-	Enemy = setmetatable({}, {
+	Enemy_C = setmetatable({}, {
 		__tostring = function()
-			return "Enemy"
+			return "Enemy_C"
 		end,
 	})
-	Enemy.__index = Enemy
-	function Enemy.new(...)
-		local self = setmetatable({}, Enemy)
+	Enemy_C.__index = Enemy_C
+	function Enemy_C.new(...)
+		local self = setmetatable({}, Enemy_C)
 		return self:constructor(...) or self
 	end
-	function Enemy:constructor(enemyName)
+	function Enemy_C:constructor(id, enemyName)
+		self.id = id
+		self.position = Vector3.one
 		self.timeSpawned = os.clock()
 		self.info = EnemyConfig[enemyName]
 		self.health = self.info.health
@@ -587,7 +665,7 @@ do
 		self.trackController = Flamework.resolveDependency("client/controllers/TrackController@TrackController")
 		self:startTravel()
 	end
-	function Enemy:startTravel()
+	function Enemy_C:startTravel()
 		RunService.RenderStepped:Connect(function(dt)
 			local _binding = self.info
 			local speed = _binding.speed
@@ -599,7 +677,8 @@ do
 			self:moveTo(pos, dir)
 		end)
 	end
-	function Enemy:moveTo(pos, lookDir)
+	function Enemy_C:moveTo(pos, lookDir)
+		self.position = pos
 		if not lookDir or lookDir.Magnitude <= 0 then
 			self.instance:PivotTo(CFrame.new(pos))
 			return nil
@@ -616,15 +695,160 @@ do
 		local smoothed = current:Lerp(target, alpha)
 		self.instance:PivotTo(smoothed)
 	end
-	function Enemy:setHealth(value)
-		self.health = value
-	end
-	function Enemy:destroy()
+	function Enemy_C:destroy()
 		self.instance:Destroy()
 	end
 end
 return {
-	Enemy = Enemy,
+	Enemy_C = Enemy_C,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="13">
+            <Properties>
+              <string name="Name">Tower_C</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local TowerConfig = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "config", "TowerConfig").TowerConfig
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local ReplicatedStorage = _services.ReplicatedStorage
+local RunService = _services.RunService
+local Workspace = _services.Workspace
+local Maid = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "maid", "Maid")
+local towerFolder = ReplicatedStorage.Assets.Towers
+local Tower_C
+do
+	Tower_C = setmetatable({}, {
+		__tostring = function()
+			return "Tower_C"
+		end,
+	})
+	Tower_C.__index = Tower_C
+	function Tower_C.new(...)
+		local self = setmetatable({}, Tower_C)
+		return self:constructor(...) or self
+	end
+	function Tower_C:constructor(id, position, tower, enemyController)
+		self.id = id
+		self.position = position
+		self.enemyController = enemyController
+		self.damageDealt = 0
+		self.targetMode = "First"
+		self.maid = Maid.new()
+		self.info = TowerConfig[tower]
+		local towerInstance = towerFolder[tower]:Clone()
+		towerInstance:PivotTo(CFrame.new(position))
+		towerInstance.Parent = Workspace.Towers
+		self.instance = towerInstance
+		self.maid:GiveTask(RunService.RenderStepped:Connect(function()
+			return self:faceTargetEnemy()
+		end))
+	end
+	function Tower_C:faceTargetEnemy()
+		local targetEnemy = self:findEnemy()
+		if not targetEnemy then
+			return nil
+		end
+		local enemyPos = targetEnemy.position
+		local towerPos = self.instance:GetPivot().Position
+		-- Only rotate left and right
+		local lookAtPos = Vector3.new(enemyPos.X, towerPos.Y, enemyPos.Z)
+		self.instance:PivotTo(CFrame.lookAt(towerPos, lookAtPos))
+	end
+	function Tower_C:findEnemy()
+		local enemies = self.enemyController:getEnemies()
+		if #enemies == 0 then
+			return nil
+		end
+		if self.targetMode == "Closest" then
+			local towerPos = self.position
+			local closestEnemy
+			local closestDistance = self.info.range
+			-- ▼ ReadonlyArray.forEach ▼
+			local _callback = function(enemy)
+				-- GetPivot works on Models (returns CFrame of the root)
+				local enemyPos = enemy.position
+				local distance = (towerPos - enemyPos).Magnitude
+				if distance < closestDistance then
+					closestEnemy = enemy
+					closestDistance = distance
+				end
+			end
+			for _k, _v in enemies do
+				_callback(_v, _k - 1, enemies)
+			end
+			-- ▲ ReadonlyArray.forEach ▲
+			return closestEnemy
+		else
+			local towerPos = self.position
+			-- ▼ ReadonlyArray.filter ▼
+			local _newValue = {}
+			local _callback = function(v)
+				return v.health > 0
+			end
+			local _length = 0
+			for _k, _v in enemies do
+				if _callback(_v, _k - 1, enemies) == true then
+					_length += 1
+					_newValue[_length] = _v
+				end
+			end
+			-- ▲ ReadonlyArray.filter ▲
+			-- ▼ ReadonlyArray.filter ▼
+			local _newValue_1 = {}
+			local _callback_1 = function(enemy)
+				local enemyPos = enemy.position
+				return (towerPos - enemyPos).Magnitude <= self.info.range
+			end
+			local _length_1 = 0
+			for _k, _v in _newValue do
+				if _callback_1(_v, _k - 1, _newValue) == true then
+					_length_1 += 1
+					_newValue_1[_length_1] = _v
+				end
+			end
+			-- ▲ ReadonlyArray.filter ▲
+			local enemiesInRange = _newValue_1
+			if #enemiesInRange == 0 then
+				return nil
+			end
+			-- Pick the enemy with maximum progress (furthest along path)
+			local _arg1 = enemiesInRange[1]
+			-- ▼ ReadonlyArray.reduce ▼
+			local _result = _arg1
+			local _callback_2 = function(best, enemy)
+				local enemyProgress = os.clock() - enemy.timeSpawned
+				local bestProgress = os.clock() - best.timeSpawned
+				if self.targetMode == "First" then
+					return if enemyProgress > bestProgress then enemy else best
+				else
+					-- must be "Last"
+					return if enemyProgress < bestProgress then enemy else best
+				end
+			end
+			for _i = 1, #enemiesInRange do
+				_result = _callback_2(_result, enemiesInRange[_i], _i - 1, enemiesInRange)
+			end
+			-- ▲ ReadonlyArray.reduce ▲
+			return _result
+		end
+	end
+	function Tower_C:destroy()
+		self.instance:Destroy()
+	end
+end
+return {
+	Tower_C = Tower_C,
 }
 ]]></string>
               <int64 name="SourceAssetId">-1</int64>
@@ -632,7 +856,7 @@ return {
             </Properties>
           </Item>
         </Item>
-        <Item class="Folder" referent="13">
+        <Item class="Folder" referent="14">
           <Properties>
             <string name="Name">ui</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -643,7 +867,7 @@ return {
           </Properties>
         </Item>
       </Item>
-      <Item class="LocalScript" referent="14">
+      <Item class="LocalScript" referent="15">
         <Properties>
           <string name="Name">RbxCharacterSounds</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1097,7 +1321,7 @@ Players.PlayerRemoving:Connect(playerRemoving)
           <int64 name="SourceAssetId">-1</int64>
           <BinaryString name="Tags"></BinaryString>
         </Properties>
-        <Item class="ModuleScript" referent="15">
+        <Item class="ModuleScript" referent="16">
           <Properties>
             <string name="Name">AtomicBinding</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1390,7 +1614,7 @@ return AtomicBinding
         </Item>
       </Item>
     </Item>
-    <Item class="StarterCharacterScripts" referent="16">
+    <Item class="StarterCharacterScripts" referent="17">
       <Properties>
         <string name="Name">StarterCharacterScripts</string>
         <BinaryString name="AttributesSerialize"></BinaryString>

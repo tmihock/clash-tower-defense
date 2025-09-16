@@ -43,11 +43,11 @@ export class TrackService implements OnStart {
 	}
 
 	public getWaypoints(): Vector3[] {
-		return this.track!.getWaypoints()
+		return this.getTrack().getWaypoints()
 	}
 
 	public getTrackLength(): number {
-		return this.track!.getTrackLength()
+		return this.getTrack().getTrackLength()
 	}
 
 	public getTrack(): Track {

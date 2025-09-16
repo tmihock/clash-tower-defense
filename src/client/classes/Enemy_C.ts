@@ -6,14 +6,19 @@ import { $print } from "rbxts-transform-debug"
 
 const enemyFolder = ReplicatedStorage.Assets.Enemies
 
-export class Enemy {
-	private health: number
+export class Enemy_C {
+	public position = Vector3.one
+	public health: number
+	public timeSpawned = os.clock()
+
 	private info: EnemyInfo
 	private instance: PVInstance
 	private trackController: TrackController
-	private timeSpawned = os.clock()
 
-	constructor(enemyName: EnemyName) {
+	constructor(
+		public id: number,
+		enemyName: EnemyName
+	) {
 		this.info = EnemyConfig[enemyName]
 		this.health = this.info.health
 
@@ -41,6 +46,8 @@ export class Enemy {
 	}
 
 	private moveTo(pos: Vector3, lookDir?: Vector3) {
+		this.position = pos
+
 		if (!lookDir || lookDir.Magnitude <= 0) {
 			this.instance.PivotTo(new CFrame(pos))
 			return
@@ -48,7 +55,6 @@ export class Enemy {
 
 		// Current orientation
 		const current = this.instance.GetPivot()
-
 		// Target orientation (facing movement direction)
 		const target = CFrame.lookAt(pos, pos.add(lookDir.Unit))
 
@@ -57,10 +63,6 @@ export class Enemy {
 
 		const smoothed = current.Lerp(target, alpha)
 		this.instance.PivotTo(smoothed)
-	}
-
-	public setHealth(value: number) {
-		this.health = value
 	}
 
 	public destroy() {

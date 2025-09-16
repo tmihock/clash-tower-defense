@@ -4,9 +4,8 @@ import { TAG_TRACK } from "shared/constants"
 import { RunService, Workspace } from "@rbxts/services"
 import { FolderWith } from "shared/types"
 import { GameService } from "server/services/GameService"
-import { Tower } from "./Tower"
 import { $print } from "rbxts-transform-debug"
-import { Enemy } from "server/classes/Enemy"
+import { Enemy_S } from "server/classes/Enemy_S"
 import { EnemyService } from "server/services/EnemyService"
 
 type NumberString = `${number}`
@@ -51,6 +50,4 @@ export class Track extends BaseComponent<Attributes, TrackInstance> implements O
 	}
 
 	onStart() {}
-
-	public addTower(tower: Tower) {}
 }

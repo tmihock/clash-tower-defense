@@ -1,11 +1,11 @@
 import { Controller, OnStart } from "@flamework/core"
-import { Enemy } from "client/classes/Enemy"
+import { Enemy_C } from "client/classes/Enemy_C"
 import { Events } from "client/networking"
 import { EnemyName } from "shared/config/EnemyConfig"
 
 @Controller({})
 export class EnemyController implements OnStart {
-	private enemies = new Map<number, Enemy>()
+	private enemies = new Map<number, Enemy_C>()
 
 	onStart() {
 		Events.enemySpawned.connect((i, e) => this.onEnemySpawned(i, e))
@@ -13,8 +13,12 @@ export class EnemyController implements OnStart {
 		Events.updateEnemyHealth.connect((i, v) => this.onEnemyHealthUpdated(i, v))
 	}
 
+	public getEnemies(): Enemy_C[] {
+		return [...this.enemies].map(v => v[1])
+	}
+
 	private onEnemySpawned(id: number, enemy: EnemyName) {
-		const newEnemy = new Enemy(enemy)
+		const newEnemy = new Enemy_C(id, enemy)
 		this.enemies.set(id, newEnemy)
 	}
 
@@ -26,6 +30,6 @@ export class EnemyController implements OnStart {
 	private onEnemyHealthUpdated(id: number, value: number) {
 		print(this.enemies, id)
 
-		this.enemies.get(id)!.setHealth(value)
+		this.enemies.get(id)!.health = value
 	}
 }

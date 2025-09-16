@@ -6,9 +6,12 @@ import {
 	UserInputService,
 	Workspace
 } from "@rbxts/services"
-import { Functions } from "client/networking"
+import { Tower_C } from "client/classes/Tower_C"
+import { Events, Functions } from "client/networking"
 import { $assert } from "rbxts-transform-debug"
 import { TowerName } from "shared/config/TowerConfig"
+import { EnemyController } from "./EnemyController"
+import { TargetMode } from "shared/networking"
 
 const Player = Players.LocalPlayer
 const Camera = Workspace.CurrentCamera
@@ -21,24 +24,55 @@ export class TowerController implements OnStart {
 	private mouseStepped?: RBXScriptConnection
 	private selectedTower: TowerName = "Barbarian"
 
+	private towers = new Map<number, Tower_C>()
+
+	constructor(private enemyController: EnemyController) {}
+
 	onStart() {
 		UserInputService.InputBegan.Connect((input, gpe) => {
 			if (gpe) return
 			if (input.KeyCode === Enum.KeyCode.E) {
-				this.togglePlacing()
+				this.togglePlacingTower()
 			}
 			if (input.UserInputType === Enum.UserInputType.MouseButton1 && this.isPlacing) {
-				this.confirmPlacement()
+				this.confirmTowerPlacement()
 			}
 		})
+
+		Events.towerPlaced.connect((i, p, t) => this.onTowerPlaced(i, p, t))
+		Events.towerDeleted.connect(i => this.onTowerDeleted(i))
+		Events.towerAttackedEnemy.connect((t, e) => this.onTowerAttackedEnemy(t, e))
+		Events.setTowerTargetMode.connect((i, t) => this.onTowerTargetModeChanged(i, t))
 	}
 
-	public stopPlacing() {
+	private onTowerTargetModeChanged(id: number, mode: TargetMode) {
+		const tower = this.towers.get(id)
+		tower!.targetMode = mode
+	}
+
+	private onTowerPlaced(id: number, pos: Vector3, tower: TowerName) {
+		const newTower = new Tower_C(id, pos, tower, this.enemyController)
+		this.towers.set(id, newTower)
+	}
+
+	private onTowerDeleted(id: number) {
+		this.towers.get(id)!.destroy()
+		this.towers.delete(id)
+	}
+
+	private onTowerAttackedEnemy(towerId: number, enemyId: number) {
+		const tower = this.towers.get(towerId)
+		if (tower) {
+			tower.damageDealt += tower.info.damage
+		}
+	}
+
+	public stopPlacingTower() {
 		this.isPlacing = false
 		this.previewModel?.Destroy()
 	}
 
-	public startPlacing() {
+	public startPlacingTower() {
 		$assert(!this.isPlacing, "Player is already placing")
 		this.isPlacing = true
 
@@ -59,7 +93,7 @@ export class TowerController implements OnStart {
 		})
 	}
 
-	private confirmPlacement() {
+	private confirmTowerPlacement() {
 		$assert(this.isPlacing)
 		const placementPos = this.mouseToTowerPos()
 		$assert(placementPos, `this.mouseToTowerPos(${this.selectedTower}) returned undefined`)
@@ -94,16 +128,16 @@ export class TowerController implements OnStart {
 		}
 	}
 
-	public togglePlacing(): boolean
-	public togglePlacing(toggle: boolean): boolean
-	public togglePlacing(toggle?: boolean): boolean {
+	public togglePlacingTower(): boolean
+	public togglePlacingTower(toggle: boolean): boolean
+	public togglePlacingTower(toggle?: boolean): boolean {
 		if (toggle === undefined) {
 			toggle = !this.isPlacing
 		}
 		if (this.isPlacing) {
-			this.stopPlacing()
+			this.stopPlacingTower()
 		} else {
-			this.startPlacing()
+			this.startPlacingTower()
 		}
 		return this.isPlacing
 	}

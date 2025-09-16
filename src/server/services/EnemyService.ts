@@ -3,7 +3,7 @@ import { Track } from "server/components/Track"
 import { ReplicatedStorage, RunService } from "@rbxts/services"
 import { EnemyConfig, EnemyName } from "shared/config/EnemyConfig"
 import { Component, Components } from "@flamework/components"
-import { Enemy } from "server/classes/Enemy"
+import { Enemy_S } from "server/classes/Enemy_S"
 import { $print } from "rbxts-transform-debug"
 import { TrackService } from "./TrackService"
 import { Events } from "server/networking"
@@ -18,8 +18,8 @@ function nextId(): number {
 
 @Service({})
 export class EnemyService implements OnStart {
-	private enemies = new Map<number, Enemy>()
-	private travelConnections = new Map<Enemy, RBXScriptConnection>()
+	private enemies = new Map<number, Enemy_S>()
+	private travelConnections = new Map<Enemy_S, RBXScriptConnection>()
 
 	constructor(
 		private trackService: TrackService,
@@ -34,9 +34,9 @@ export class EnemyService implements OnStart {
 		}
 	}
 
-	public createEnemy(enemyName: EnemyName): Enemy {
+	public createEnemy(enemyName: EnemyName): Enemy_S {
 		const id = nextId()
-		const newEnemy = new Enemy(enemyName, id)
+		const newEnemy = new Enemy_S(enemyName, id)
 
 		this.enemies.set(id, newEnemy)
 		Events.enemySpawned.broadcast(id, enemyName)
@@ -44,7 +44,7 @@ export class EnemyService implements OnStart {
 		return newEnemy
 	}
 
-	private startEnemyTravel(enemy: Enemy) {
+	private startEnemyTravel(enemy: Enemy_S) {
 		enemy.destroying.Once(() => {
 			this.travelConnections.get(enemy)!.Disconnect()
 			this.travelConnections.delete(enemy)
@@ -58,7 +58,7 @@ export class EnemyService implements OnStart {
 		)
 	}
 
-	private incrementEnemyPosition(enemy: Enemy, dt: number) {
+	private incrementEnemyPosition(enemy: Enemy_S, dt: number) {
 		const { speed } = enemy.info
 		const elapsed = os.clock() - enemy.timeSpawned
 

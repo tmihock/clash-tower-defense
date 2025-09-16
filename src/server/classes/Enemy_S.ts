@@ -5,7 +5,7 @@ import { Events } from "server/networking"
 
 const enemyFolder = ReplicatedStorage.Assets.Enemies
 
-export class Enemy {
+export class Enemy_S {
 	private health: number
 
 	public info: EnemyInfo
