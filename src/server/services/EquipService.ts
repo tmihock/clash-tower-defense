@@ -20,7 +20,7 @@ const defaultEquips: EquipBar = ["Barbarian"]
 export class EquipService implements OnStart, DataIO {
 	private playerEquips = new Map<Player, EquipBar>()
 
-	constructor(private inventoryService: InventoryService) {}
+	constructor() {}
 
 	onStart() {
 		Events.setEquipBar.connect((p, e) => this.setEquipBar(p, e, true))
@@ -28,14 +28,6 @@ export class EquipService implements OnStart, DataIO {
 	}
 
 	private setEquipBar(player: Player, equipBar: EquipBar, fromClient: boolean = false) {
-		if (fromClient) {
-			if (equipBar.size() > EQUIP_BAR_SIZE) return
-			// Remove towers player doesn't own
-			equipBar = equipBar.map(tower =>
-				tower && this.inventoryService.playerHasTower(player, tower) ? tower : "None"
-			)
-		}
-
 		this.playerEquips.set(player, equipBar)
 
 		if (!fromClient) {
@@ -49,11 +41,6 @@ export class EquipService implements OnStart, DataIO {
 		tower: TowerName,
 		fromClient: boolean = false
 	) {
-		if (fromClient) {
-			if (index < 0 || index > EQUIP_BAR_SIZE) return
-			if (!this.inventoryService.playerHasTower(player, tower)) return
-		}
-
 		this.getEquipBar(player)![index] = tower
 
 		if (!fromClient) {

@@ -22,7 +22,7 @@ export class TowerController implements OnStart {
 	private isPlacing = false
 	private previewModel?: PVInstance
 	private mouseStepped?: RBXScriptConnection
-	private selectedTower: TowerName = "Barbarian"
+	private selectedTower?: TowerName
 
 	private towers = new Map<number, Tower_C>()
 
@@ -31,9 +31,9 @@ export class TowerController implements OnStart {
 	onStart() {
 		UserInputService.InputBegan.Connect((input, gpe) => {
 			if (gpe) return
-			if (input.KeyCode === Enum.KeyCode.E) {
-				this.togglePlacingTower()
-			}
+			// if (input.KeyCode === Enum.KeyCode.E) {
+			// 	this.togglePlacingTower()
+			// }
 			if (input.UserInputType === Enum.UserInputType.MouseButton1 && this.isPlacing) {
 				this.confirmTowerPlacement()
 			}
@@ -69,14 +69,17 @@ export class TowerController implements OnStart {
 
 	public stopPlacingTower() {
 		this.isPlacing = false
+		this.selectedTower = undefined
+		this.mouseStepped?.Disconnect()
 		this.previewModel?.Destroy()
 	}
 
-	public startPlacingTower() {
+	public startPlacingTower(tower: TowerName) {
 		$assert(!this.isPlacing, "Player is already placing")
+		this.selectedTower = tower
 		this.isPlacing = true
 
-		const preview = towerFolder[this.selectedTower].Clone()
+		const preview = towerFolder[tower].Clone()
 		this.previewModel = preview
 		preview.Parent = Workspace
 
@@ -86,7 +89,7 @@ export class TowerController implements OnStart {
 			.forEach(makePartPreview)
 
 		this.mouseStepped = RunService.RenderStepped.Connect(dt => {
-			const pos = this.mouseToTowerPos()
+			const pos = this.mouseToTowerPos(tower)
 			if (pos) {
 				preview.MoveTo(pos)
 			}
@@ -95,7 +98,8 @@ export class TowerController implements OnStart {
 
 	private confirmTowerPlacement() {
 		$assert(this.isPlacing)
-		const placementPos = this.mouseToTowerPos()
+		$assert(this.selectedTower)
+		const placementPos = this.mouseToTowerPos(this.selectedTower)
 		$assert(placementPos, `this.mouseToTowerPos(${this.selectedTower}) returned undefined`)
 
 		const clone = this.previewModel?.Clone()
@@ -110,7 +114,7 @@ export class TowerController implements OnStart {
 		})
 	}
 
-	private mouseToTowerPos(): Vector3 | undefined {
+	private mouseToTowerPos(tower: TowerName): Vector3 | undefined {
 		const { X, Y } = UserInputService.GetMouseLocation()
 		const { Origin, Direction } = Camera!.ViewportPointToRay(X, Y)
 
@@ -122,22 +126,22 @@ export class TowerController implements OnStart {
 
 		if (rayResult) {
 			const { X, Z } = rayResult.Position
-			const Y = rayResult.Position.Y + towerFolder[this.selectedTower].hitbox.Size.Y / 2
+			const Y = rayResult.Position.Y + towerFolder[tower].hitbox.Size.Y / 2
 
 			return new Vector3(X, Y, Z)
 		}
 	}
 
-	public togglePlacingTower(): boolean
-	public togglePlacingTower(toggle: boolean): boolean
-	public togglePlacingTower(toggle?: boolean): boolean {
+	public togglePlacingTower(tower: TowerName): boolean
+	public togglePlacingTower(tower: TowerName, toggle: boolean): boolean
+	public togglePlacingTower(tower: TowerName, toggle?: boolean): boolean {
 		if (toggle === undefined) {
 			toggle = !this.isPlacing
 		}
 		if (this.isPlacing) {
 			this.stopPlacingTower()
 		} else {
-			this.startPlacingTower()
+			this.startPlacingTower(tower)
 		}
 		return this.isPlacing
 	}

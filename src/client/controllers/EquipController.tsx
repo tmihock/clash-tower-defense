@@ -5,18 +5,40 @@ import { TowerName } from "shared/config/TowerConfig"
 import { EquipBar } from "shared/networking"
 import { Players } from "@rbxts/services"
 import Signal from "@rbxts/lemon-signal"
+import { createPortal, createRoot } from "@rbxts/react-roblox"
+import { EquipBarUI } from "client/ui/EquipBar"
+import React from "react-roblox"
+import { TowerController } from "./TowerController"
 
 const player = Players.LocalPlayer
+const playerGui = player.WaitForChild("PlayerGui") as PlayerGui
 
 @Controller({})
 export class EquipController implements OnStart {
 	public equipBarChanged = new Signal<(equipBar: EquipBar) => void>()
 
-	private equipBar = [] as EquipBar
+	private root: ReactRoblox.Root | undefined
+	private equipBar = ["None", "None", "None", "None"] as EquipBar
+
+	constructor(private towerController: TowerController) {}
 
 	onStart() {
 		Events.setEquipBar.connect(e => this.setEquipBar(e, false))
 		Events.updateEquipBar.connect((i, v) => this.updateEquipBar(i, v, false))
+		this.mountUI()
+	}
+
+	
+		private onEquipSlotClicked(index: number, tower: TowerName) {
+			this.towerController.togglePlacingTower(tower)
+		}
+		
+	private mountUI() {
+		this.root = createRoot(new Instance("Folder"))
+
+		this.root.render(
+			createPortal(<EquipBarUI initial={this.equipBar }onClick={(i, t) => this.onEquipSlotClicked(i,t)}/>, playerGui)
+		)
 	}
 
 	public updateEquipBar(index: number, value: TowerName, tellServer: boolean = true) {
