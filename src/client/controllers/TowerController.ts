@@ -12,9 +12,10 @@ import { $assert } from "rbxts-transform-debug"
 import { TowerName } from "shared/config/TowerConfig"
 import { EnemyController } from "./EnemyController"
 import { TargetMode } from "shared/networking"
+import { Atom, atom } from "@rbxts/charm"
 
-const Player = Players.LocalPlayer
-const Camera = Workspace.CurrentCamera
+const player = Players.LocalPlayer
+const camera = Workspace.CurrentCamera
 const towerFolder = ReplicatedStorage.Assets.Towers
 
 @Controller({})
@@ -22,7 +23,7 @@ export class TowerController implements OnStart {
 	private isPlacing = false
 	private previewModel?: PVInstance
 	private mouseStepped?: RBXScriptConnection
-	private selectedTower?: TowerName
+	public selectedTower = atom<TowerName>("None")
 
 	private towers = new Map<number, Tower_C>()
 
@@ -34,9 +35,11 @@ export class TowerController implements OnStart {
 			// if (input.KeyCode === Enum.KeyCode.E) {
 			// 	this.togglePlacingTower()
 			// }
-			if (input.UserInputType === Enum.UserInputType.MouseButton1 && this.isPlacing) {
-				this.confirmTowerPlacement()
-			}
+
+			if (input.KeyCode)
+				if (input.UserInputType === Enum.UserInputType.MouseButton1 && this.isPlacing) {
+					this.confirmTowerPlacement()
+				}
 		})
 
 		Events.towerPlaced.connect((i, p, t) => this.onTowerPlaced(i, p, t))
@@ -69,14 +72,15 @@ export class TowerController implements OnStart {
 
 	public stopPlacingTower() {
 		this.isPlacing = false
-		this.selectedTower = undefined
+		this.selectedTower("None")
 		this.mouseStepped?.Disconnect()
 		this.previewModel?.Destroy()
 	}
 
 	public startPlacingTower(tower: TowerName) {
-		$assert(!this.isPlacing, "Player is already placing")
-		this.selectedTower = tower
+		if (this.isPlacing) this.stopPlacingTower()
+		if (tower === "None") return
+		this.selectedTower(tower)
 		this.isPlacing = true
 
 		const preview = towerFolder[tower].Clone()
@@ -91,20 +95,28 @@ export class TowerController implements OnStart {
 		this.mouseStepped = RunService.RenderStepped.Connect(dt => {
 			const pos = this.mouseToTowerPos(tower)
 			if (pos) {
+				/**
+				 * 	If (this.canPlace(pos)) {
+				 * 		this.preview.hightlight.color = green
+				 * 	} else {
+				 * 		this.preview.hightlight.color = red
+				 * 	}
+				 */
 				preview.MoveTo(pos)
 			}
 		})
 	}
 
 	private confirmTowerPlacement() {
+		const selectedTower = this.selectedTower()
 		$assert(this.isPlacing)
-		$assert(this.selectedTower)
-		const placementPos = this.mouseToTowerPos(this.selectedTower)
+		$assert(selectedTower !== "None")
+		const placementPos = this.mouseToTowerPos(selectedTower)
 		$assert(placementPos, `this.mouseToTowerPos(${this.selectedTower}) returned undefined`)
 
 		const clone = this.previewModel?.Clone()
 
-		Functions.placeTower.invoke(placementPos, this.selectedTower).then(wasPlaced => {
+		Functions.placeTower.invoke(placementPos, selectedTower).then(wasPlaced => {
 			if (wasPlaced) {
 				clone?.Destroy()
 			} else {
@@ -116,7 +128,7 @@ export class TowerController implements OnStart {
 
 	private mouseToTowerPos(tower: TowerName): Vector3 | undefined {
 		const { X, Y } = UserInputService.GetMouseLocation()
-		const { Origin, Direction } = Camera!.ViewportPointToRay(X, Y)
+		const { Origin, Direction } = camera!.ViewportPointToRay(X, Y)
 
 		const rayParams = new RaycastParams()
 		rayParams.FilterType = Enum.RaycastFilterType.Exclude
