@@ -52,15 +52,17 @@ export class EquipController implements OnStart {
 
 	private mountUI() {
 		this.root = createRoot(new Instance("Folder"))
-		const e = (
-			<EquipBarUI
-				selectedAtom={this.towerController.selectedTower}
-				initial={this.equipBar}
-				onClick={(i, t) => this.onEquipSlotClicked(i, t)}
-			/>
+
+		this.root.render(
+			createPortal(
+				<EquipBarUI
+					selectedAtom={this.towerController.selectedTower}
+					initial={this.equipBar}
+					onClick={(i, t) => this.onEquipSlotClicked(i, t)}
+				/>,
+				playerGui
+			)
 		)
-		const portal = createPortal(e, playerGui)
-		this.root.render(portal)
 	}
 
 	public updateEquipBar(index: number, value: TowerName, tellServer: boolean = true) {

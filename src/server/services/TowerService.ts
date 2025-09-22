@@ -27,9 +27,6 @@ export class TowerService implements OnStart {
 	) {}
 
 	onStart() {
-		task.wait(1)
-		this.spawnTower(Workspace.tPos.Position, "Barbarian")
-
 		Functions.placeTower.setCallback((p, po, t) => this.onPlaceTower(p, po, t))
 	}
 

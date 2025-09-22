@@ -1,5 +1,6 @@
-import { Controller, Dependency, OnStart } from "@flamework/core"
+import { Controller, OnStart } from "@flamework/core"
 import {
+	CollectionService,
 	Players,
 	ReplicatedStorage,
 	RunService,
@@ -12,9 +13,15 @@ import { $assert } from "rbxts-transform-debug"
 import { TowerName } from "shared/config/TowerConfig"
 import { EnemyController } from "./EnemyController"
 import { TargetMode } from "shared/networking"
-import { Atom, atom } from "@rbxts/charm"
+import { atom } from "@rbxts/charm"
+import { createPortal, createRoot } from "@rbxts/react-roblox"
+import React from "@rbxts/react"
+import { TAG_TOWER } from "shared/constants"
+import { findFirstAncestorWithTag } from "shared/util/findFirstAncestorWithTag"
+import { TooltipUI } from "client/ui/Tooltip"
 
 const player = Players.LocalPlayer
+const playerGui = player.WaitForChild("PlayerGui") as PlayerGui
 const camera = Workspace.CurrentCamera
 const towerFolder = ReplicatedStorage.Assets.Towers
 
@@ -26,6 +33,7 @@ export class TowerController implements OnStart {
 	public selectedTower = atom<TowerName>("None")
 
 	private towers = new Map<number, Tower_C>()
+	private tooltipsEnabled = true
 
 	constructor(private enemyController: EnemyController) {}
 
@@ -46,6 +54,46 @@ export class TowerController implements OnStart {
 		Events.towerDeleted.connect(i => this.onTowerDeleted(i))
 		Events.towerAttackedEnemy.connect((t, e) => this.onTowerAttackedEnemy(t, e))
 		Events.setTowerTargetMode.connect((i, t) => this.onTowerTargetModeChanged(i, t))
+
+		this.enableTowerTooltips()
+	}
+
+	private enableTowerTooltips() {
+		const visible = atom(true)
+		const mousePos = atom(new Vector2(0, 0))
+		const hoveredTower = atom<TowerName>("None")
+
+		const root = createRoot(new Instance("Folder"))
+
+		root.render(
+			createPortal(
+				<TooltipUI hoveredTower={hoveredTower} visibleAtom={visible} mousePosAtom={mousePos} />,
+				playerGui
+			)
+		)
+
+		RunService.RenderStepped.Connect(dt => {
+			if (!this.tooltipsEnabled) return
+			if (this.isPlacing) return
+
+			const { X, Y } = UserInputService.GetMouseLocation()
+			const { Origin, Direction } = camera!.ViewportPointToRay(X, Y)
+
+			const rayParams = new RaycastParams()
+			rayParams.FilterType = Enum.RaycastFilterType.Include
+			rayParams.FilterDescendantsInstances = CollectionService.GetTagged(TAG_TOWER)
+
+			const rayResult = Workspace.Raycast(Origin, Direction.mul(1000), rayParams)
+
+			if (rayResult) {
+				const tower = findFirstAncestorWithTag(rayResult.Instance, TAG_TOWER)
+				visible(true)
+				mousePos(new Vector2(X, Y))
+				hoveredTower(tower ? (tower.Name as TowerName) : "None")
+			} else {
+				visible(false)
+			}
+		})
 	}
 
 	private onTowerTargetModeChanged(id: number, mode: TargetMode) {
@@ -85,26 +133,32 @@ export class TowerController implements OnStart {
 
 		const preview = towerFolder[tower].Clone()
 		this.previewModel = preview
-		preview.Parent = Workspace
+		preview.Parent = Workspace.Preview
 
 		preview
 			.GetDescendants()
 			.filter(i => i.IsA("BasePart"))
 			.forEach(makePartPreview)
 
+		// Create cylinder (shadow) under tower based on hitbox size
+
 		this.mouseStepped = RunService.RenderStepped.Connect(dt => {
 			const pos = this.mouseToTowerPos(tower)
 			if (pos) {
-				/**
-				 * 	If (this.canPlace(pos)) {
-				 * 		this.preview.hightlight.color = green
-				 * 	} else {
-				 * 		this.preview.hightlight.color = red
-				 * 	}
-				 */
+				if (this.canPlace()) {
+					// Cylinder green
+				} else {
+					// Cylinder red
+				}
 				preview.MoveTo(pos)
 			}
 		})
+	}
+
+	private canPlace(): boolean {
+		return (
+			this.mouseToTowerPos(this.selectedTower()) !== undefined && this.isPlacing // && Tower doesn't hit track
+		)
 	}
 
 	private confirmTowerPlacement() {
