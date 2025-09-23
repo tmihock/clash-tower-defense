@@ -49,22 +49,44 @@ export class TowerService implements OnStart {
 		const track = this.trackService.getTrack()
 		const path = track.instance.path
 
-		const { X, Z } = towerFolder[tower].hitbox.Size
-		const towerSize = new Vector3(X, 1000, Z) // xz-plane
+		const towerInstance = towerFolder[tower]
+		const hitbox = towerInstance.hitbox
 
+		const radius = hitbox.Size.Y / 2
+		const height = hitbox.Size.X
+
+		// CFrame for the candidate placement
+		const cframe = new CFrame(pos, pos.add(hitbox.CFrame.LookVector))
+
+		// Broad phase box query
 		const overlapParams = new OverlapParams()
 		overlapParams.FilterType = Enum.RaycastFilterType.Include
 		overlapParams.FilterDescendantsInstances = [path, Workspace.Towers]
 
-		// Query physics: does this box overlap any track parts?
-		const hits = Workspace.GetPartBoundsInBox(
-			new CFrame(pos), // center of the tower
-			towerSize, // size of the tower
-			overlapParams
-		)
+		const hits = Workspace.GetPartBoundsInBox(cframe, towerInstance.GetExtentsSize(), overlapParams)
 
-		// If we got any hits → tower is on the track
-		return hits.size() === 0
+		// Narrow phase: test cylinder vs each candidate’s volume
+		for (const part of hits) {
+			// Candidate center in cylinder space
+			const rel = cframe.PointToObjectSpace(part.Position)
+
+			// Half-extents of candidate in world space (approx radius in YZ plane)
+			const partRadius = math.max(part.Size.Y, part.Size.Z) / 2
+			const partHalfHeight = part.Size.X / 2
+
+			// Height axis check (along local X of cylinder)
+			const overlapX = math.abs(rel.X) <= height / 2 + partHalfHeight
+			if (!overlapX) continue
+
+			// Radial check in cylinder cross-section (local YZ)
+			const dist2 = rel.Y * rel.Y + rel.Z * rel.Z
+			const maxRadius = radius + partRadius
+			if (dist2 <= maxRadius * maxRadius) {
+				return false // overlap detected
+			}
+		}
+
+		return true
 	}
 
 	public destroyTower(id: number) {

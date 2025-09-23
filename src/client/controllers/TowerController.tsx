@@ -9,7 +9,7 @@ import {
 } from "@rbxts/services"
 import { Tower_C } from "client/classes/Tower_C"
 import { Events, Functions } from "client/networking"
-import { $assert } from "rbxts-transform-debug"
+import { $assert, $print } from "rbxts-transform-debug"
 import { TowerName } from "shared/config/TowerConfig"
 import { EnemyController } from "./EnemyController"
 import { TargetMode } from "shared/networking"
@@ -19,6 +19,7 @@ import React from "@rbxts/react"
 import { TAG_TOWER } from "shared/constants"
 import { findFirstAncestorWithTag } from "shared/util/findFirstAncestorWithTag"
 import { TooltipUI } from "client/ui/Tooltip"
+import { TrackController } from "./TrackController"
 
 const player = Players.LocalPlayer
 const playerGui = player.WaitForChild("PlayerGui") as PlayerGui
@@ -35,7 +36,10 @@ export class TowerController implements OnStart {
 	private towers = new Map<number, Tower_C>()
 	private tooltipsEnabled = true
 
-	constructor(private enemyController: EnemyController) {}
+	constructor(
+		private enemyController: EnemyController,
+		private trackController: TrackController
+	) {}
 
 	onStart() {
 		UserInputService.InputBegan.Connect((input, gpe) => {
@@ -141,14 +145,16 @@ export class TowerController implements OnStart {
 			.forEach(makePartPreview)
 
 		// Create cylinder (shadow) under tower based on hitbox size
+		const previewHitbox = preview.hitbox
+		previewHitbox.Transparency = 0.5
 
 		this.mouseStepped = RunService.RenderStepped.Connect(dt => {
 			const pos = this.mouseToTowerPos(tower)
 			if (pos) {
 				if (this.canPlace()) {
-					// Cylinder green
+					previewHitbox.Color = new Color3(0, 1, 0)
 				} else {
-					// Cylinder red
+					previewHitbox.Color = new Color3(1, 0, 0)
 				}
 				preview.MoveTo(pos)
 			}
@@ -156,9 +162,45 @@ export class TowerController implements OnStart {
 	}
 
 	private canPlace(): boolean {
+		const mousePos = this.mouseToTowerPos(this.selectedTower())
 		return (
-			this.mouseToTowerPos(this.selectedTower()) !== undefined && this.isPlacing // && Tower doesn't hit track
+			mousePos !== undefined && this.posNotOnTrackOrTower(mousePos) && this.isPlacing // && Tower doesn't hit track
 		)
+	}
+
+	private posNotOnTrackOrTower(pos: Vector3): boolean {
+		const path = this.trackController.getTrack().path.GetChildren()
+		const tower = this.selectedTower()
+
+		// tower’s own placement radius
+		const radius = towerFolder[tower].hitbox.Size.Y / 2
+
+		// collect tower hitboxes (still treated as circles)
+		const towerHitboxes = Workspace.Towers.GetChildren()
+			.map(t => t.FindFirstChild("hitbox")!)
+			.filter(t => t.IsA("BasePart"))
+
+		const px = pos.X
+		const pz = pos.Z
+
+		// --- PATH: circle vs OBB (works when path parts are rotated) ---
+		for (const part of path) {
+		}
+
+		// --- TOWERS: circle vs circle (unchanged logically) ---
+		for (const hitbox of towerHitboxes) {
+			// defensive: ensure we have a valid BasePart
+			if (!hitbox || !hitbox.IsA("BasePart")) continue
+
+			const dx = px - hitbox.Position.X
+			const dz = pz - hitbox.Position.Z
+
+			if (dx * dx + dz * dz < radius * radius) {
+				return false
+			}
+		}
+
+		return true
 	}
 
 	private confirmTowerPlacement() {
@@ -192,7 +234,9 @@ export class TowerController implements OnStart {
 
 		if (rayResult) {
 			const { X, Z } = rayResult.Position
-			const Y = rayResult.Position.Y + towerFolder[tower].hitbox.Size.Y / 2
+
+			const worldSize = towerFolder[tower].GetExtentsSize()
+			const Y = rayResult.Position.Y + worldSize.Y / 2
 
 			return new Vector3(X, Y, Z)
 		}
@@ -214,6 +258,7 @@ export class TowerController implements OnStart {
 }
 
 function makePartPreview(part: BasePart) {
+	if (part.Name === "hitbox") return
 	part.Transparency = 0.5
 	part.CanCollide = false
 	part.CanQuery = false

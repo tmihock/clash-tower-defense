@@ -39,7 +39,7 @@ export class TrackController implements OnInit, OnStart {
 		return this.waypoints
 	}
 
-	public getTrack(): Instance {
+	public getTrack(): TrackInstance {
 		return this.trackInstance
 	}
 
