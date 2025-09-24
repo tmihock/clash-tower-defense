@@ -169,13 +169,44 @@ export class TowerController implements OnStart {
 	}
 
 	private posNotOnTrackOrTower(pos: Vector3): boolean {
+		return this.posNotOnTower(pos) && this.posNotOnTrack(pos)
+	}
+
+	private posNotOnTrack(pos: Vector3): boolean {
 		const path = this.trackController.getTrack().path.GetChildren()
 		const tower = this.selectedTower()
 
-		// tower’s own placement radius
 		const radius = towerFolder[tower].hitbox.Size.Y / 2
 
-		// collect tower hitboxes (still treated as circles)
+		for (const part of path) {
+			const halfSizeX = part.Size.X / 2
+			const halfSizeZ = part.Size.Z / 2
+
+			const minX = part.Position.X - halfSizeX
+			const maxX = part.Position.X + halfSizeX
+
+			const minZ = part.Position.Z - halfSizeZ
+			const maxZ = part.Position.Z + halfSizeZ
+
+			const closestX = math.clamp(pos.X, minX, maxX)
+			const closestZ = math.clamp(pos.Z, minZ, maxZ)
+
+			const dx = pos.X - closestX
+			const dz = pos.Z - closestZ
+
+			if (dx * dx + dz * dz < radius * radius) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	private posNotOnTower(pos: Vector3): boolean {
+		const tower = this.selectedTower()
+
+		const radius = towerFolder[tower].hitbox.Size.Y / 2
+
 		const towerHitboxes = Workspace.Towers.GetChildren()
 			.map(t => t.FindFirstChild("hitbox")!)
 			.filter(t => t.IsA("BasePart"))
@@ -183,11 +214,6 @@ export class TowerController implements OnStart {
 		const px = pos.X
 		const pz = pos.Z
 
-		// --- PATH: circle vs OBB (works when path parts are rotated) ---
-		for (const part of path) {
-		}
-
-		// --- TOWERS: circle vs circle (unchanged logically) ---
 		for (const hitbox of towerHitboxes) {
 			// defensive: ensure we have a valid BasePart
 			if (!hitbox || !hitbox.IsA("BasePart")) continue
