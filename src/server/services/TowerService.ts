@@ -46,43 +46,57 @@ export class TowerService implements OnStart {
 	}
 
 	private posNotOnTrackOrTower(pos: Vector3, tower: TowerName): boolean {
-		const track = this.trackService.getTrack()
-		const path = track.instance.path
+		return this.posNotOnTower(pos, tower) && this.posNotOnTrack(pos, tower)
+	}
 
-		const towerInstance = towerFolder[tower]
-		const hitbox = towerInstance.hitbox
+	private posNotOnTrack(pos: Vector3, tower: TowerName): boolean {
+		const path = this.trackService.getTrack().instance.path.GetChildren()
 
-		const radius = hitbox.Size.Y / 2
-		const height = hitbox.Size.X
+		const radius = towerFolder[tower].hitbox.Size.Y / 2
 
-		// CFrame for the candidate placement
-		const cframe = new CFrame(pos, pos.add(hitbox.CFrame.LookVector))
+		for (const part of path) {
+			const halfSizeX = part.Size.X / 2
+			const halfSizeZ = part.Size.Z / 2
 
-		// Broad phase box query
-		const overlapParams = new OverlapParams()
-		overlapParams.FilterType = Enum.RaycastFilterType.Include
-		overlapParams.FilterDescendantsInstances = [path, Workspace.Towers]
+			const minX = part.Position.X - halfSizeX
+			const maxX = part.Position.X + halfSizeX
 
-		const hits = Workspace.GetPartBoundsInBox(cframe, towerInstance.GetExtentsSize(), overlapParams)
+			const minZ = part.Position.Z - halfSizeZ
+			const maxZ = part.Position.Z + halfSizeZ
 
-		// Narrow phase: test cylinder vs each candidate’s volume
-		for (const part of hits) {
-			// Candidate center in cylinder space
-			const rel = cframe.PointToObjectSpace(part.Position)
+			const closestX = math.clamp(pos.X, minX, maxX)
+			const closestZ = math.clamp(pos.Z, minZ, maxZ)
 
-			// Half-extents of candidate in world space (approx radius in YZ plane)
-			const partRadius = math.max(part.Size.Y, part.Size.Z) / 2
-			const partHalfHeight = part.Size.X / 2
+			const dx = pos.X - closestX
+			const dz = pos.Z - closestZ
 
-			// Height axis check (along local X of cylinder)
-			const overlapX = math.abs(rel.X) <= height / 2 + partHalfHeight
-			if (!overlapX) continue
+			if (dx * dx + dz * dz < radius * radius) {
+				return false
+			}
+		}
 
-			// Radial check in cylinder cross-section (local YZ)
-			const dist2 = rel.Y * rel.Y + rel.Z * rel.Z
-			const maxRadius = radius + partRadius
-			if (dist2 <= maxRadius * maxRadius) {
-				return false // overlap detected
+		return true
+	}
+
+	private posNotOnTower(pos: Vector3, tower: TowerName): boolean {
+		const radius = towerFolder[tower].hitbox.Size.Y / 2
+
+		const towerHitboxes = Workspace.Towers.GetChildren()
+			.map(t => t.FindFirstChild("hitbox")!)
+			.filter(t => t.IsA("BasePart"))
+
+		const px = pos.X
+		const pz = pos.Z
+
+		for (const hitbox of towerHitboxes) {
+			// defensive: ensure we have a valid BasePart
+			if (!hitbox || !hitbox.IsA("BasePart")) continue
+
+			const dx = px - hitbox.Position.X
+			const dz = pz - hitbox.Position.Z
+
+			if (dx * dx + dz * dz < radius * radius) {
+				return false
 			}
 		}
 
