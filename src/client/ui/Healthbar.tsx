@@ -1,5 +1,3 @@
-import { Atom } from "@rbxts/charm"
-import { useAtom } from "@rbxts/react-charm"
 import React, { useEffect, useState } from "@rbxts/react"
 import { useMotion } from "@rbxts/pretty-react-hooks"
 import { Events } from "client/networking"
@@ -9,7 +7,7 @@ interface Props {
 	initialHealth: number
 }
 
-export function Healthbar({ initialHealth }: Props) {
+export function HealthBar({ initialHealth }: Props) {
 	const [health, setHealth] = useState(initialHealth)
 
 	// Create animated motion for the fill scale

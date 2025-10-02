@@ -1,16 +1,12 @@
-import React, { useContext, useState } from "@rbxts/react"
+import React from "@rbxts/react"
 import { TowerName } from "shared/config/TowerConfig"
 import { EquipSlot } from "./EquipSlot"
 import { EquipBar } from "shared/networking"
 import { Atom } from "@rbxts/charm"
-import { useInventory } from "."
-
-function nextTower(tower: TowerName): TowerName {
-	return "Barbarian"
-}
+import { useInventory } from "./InventoryContext"
 
 export interface EquipBarProps {
-	initial: EquipBar
+	initial: Atom<EquipBar>
 	selectedAtom: Atom<TowerName>
 	onClick: (slot: number, currentValue: TowerName) => void
 }
@@ -18,14 +14,6 @@ export interface EquipBarProps {
 // The equip bar with 4 slots
 export function EquipBarUI({ selectedAtom, onClick }: EquipBarProps) {
 	const { equipped } = useInventory()
-
-	const handleClick = (index: number) => {
-		const newEquipped = [...equipped]
-		newEquipped[index] = nextTower(newEquipped[index])
-		// setEquipped(newEquipped);
-
-		onClick(index, equipped[index])
-	}
 
 	return (
 		<frame
@@ -45,7 +33,7 @@ export function EquipBarUI({ selectedAtom, onClick }: EquipBarProps) {
 					index={i}
 					selectedAtom={selectedAtom}
 					tower={tower}
-					onClick={() => handleClick(i)}
+					onClick={(tower: TowerName) => onClick(i, tower)}
 				/>
 			))}
 		</frame>

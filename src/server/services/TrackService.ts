@@ -2,9 +2,7 @@ import { Components } from "@flamework/components"
 import { Service, OnStart, Dependency } from "@flamework/core"
 import { $assert } from "rbxts-transform-debug"
 import { Track } from "server/components/Track"
-import { EnemyName } from "shared/config/EnemyConfig"
 import { FolderWith } from "shared/types"
-import { EnemyService } from "./EnemyService"
 
 interface TrackInstance extends Instance {
 	waypoints: FolderWith<BasePart>

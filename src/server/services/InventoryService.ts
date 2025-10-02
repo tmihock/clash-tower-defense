@@ -2,6 +2,7 @@ import { Service, OnStart } from "@flamework/core"
 import { DataIO, SaveableDataObject } from "./DataService"
 import { $terrify } from "rbxts-transformer-t-new"
 import { TowerName } from "shared/config/TowerConfig"
+import { Events } from "server/networking"
 
 export type Inventory = {
 	unlockedTowers: TowerName[]
@@ -38,6 +39,7 @@ export class InventoryService implements DataIO {
 		} else {
 			this.playerUnlockedTowers.set(player, new Set(table.clone(defaultUnlocks)))
 		}
+		Events.setUnlockedInventory.fire(player, [...this.playerUnlockedTowers.get(player)!])
 	}
 
 	onDataSave(player: Player): SaveableDataObject<Inventory> {

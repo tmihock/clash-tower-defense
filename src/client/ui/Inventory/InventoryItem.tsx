@@ -1,7 +1,7 @@
-import { Atom } from "@rbxts/charm"
-import React from "@rbxts/react"
+// InventoryItem.tsx
+import React, { useCallback } from "@rbxts/react"
 import { TowerName } from "shared/config/TowerConfig"
-import { useInventory } from "."
+import { useInventory } from "./InventoryContext"
 
 interface Props {
 	tower: TowerName
@@ -10,48 +10,59 @@ interface Props {
 
 export function InventoryItem({ tower, unlocked }: Props) {
 	const { selectTower, selectedTower } = useInventory()
-
 	const isSelected = selectedTower !== "None" && selectedTower === tower
 
+	const onClick = useCallback(() => {
+		if (unlocked) {
+			if (!isSelected) {
+				selectTower(tower)
+			} else {
+				selectTower("None")
+			}
+		}
+	}, [unlocked, selectedTower, tower, selectTower])
+
 	return (
-		<frame
-			Size={UDim2.fromOffset(120, 140)}
-			BackgroundColor3={unlocked ? Color3.fromRGB(40, 120, 40) : Color3.fromRGB(80, 80, 80)}
-			BorderSizePixel={0}
+		<imagebutton
+			Size={UDim2.fromOffset(100, 120)}
+			BackgroundTransparency={0}
+			BorderSizePixel={2}
+			BorderColor3={isSelected ? Color3.fromRGB(255, 255, 150) : Color3.fromRGB(0, 0, 0)}
+			Event={{ MouseButton1Click: onClick }}
 		>
-			<uicorner CornerRadius={new UDim(0, 8)} />
-
-			<viewportframe
-				Size={UDim2.fromOffset(100, 100)}
-				Position={UDim2.fromScale(0.5, 0.1)}
-				AnchorPoint={new Vector2(0.5, 0)}
-				BackgroundTransparency={unlocked ? 0 : 0.4}
-				BackgroundColor3={Color3.fromRGB(25, 25, 25)}
-			>
-				<uicorner CornerRadius={new UDim(0, 6)} />
-				{/* TODO: insert tower preview model here */}
-			</viewportframe>
-
-			<textbutton
-				Text={tower}
-				Size={new UDim2(1, 0, 0, 30)}
-				Position={UDim2.fromScale(0, 1)}
-				AnchorPoint={new Vector2(0, 1)}
-				TextScaled={true}
+			{/* Tower name in center */}
+			<textlabel
+				Size={UDim2.fromScale(1, 0.15)}
+				Position={UDim2.fromScale(0, 0.85)}
 				BackgroundTransparency={1}
-				TextColor3={unlocked ? Color3.fromRGB(255, 255, 255) : Color3.fromRGB(150, 150, 150)}
-				Event={{ MouseButton1Click: () => selectTower(tower) }}
+				Text={tower}
+				TextColor3={unlocked ? Color3.fromRGB(20, 20, 20) : Color3.fromRGB(140, 8, 8)}
+				TextScaled={true}
+				Font="SourceSansBold"
 			/>
 
+			{/* Preview slot */}
+			<viewportframe
+				Size={UDim2.fromOffset(80, 80)}
+				Position={UDim2.fromScale(0.5, 0.1)}
+				AnchorPoint={new Vector2(0.5, 0)}
+				BackgroundTransparency={0.5}
+				BackgroundColor3={Color3.fromRGB(25, 25, 25)}
+			>
+				{/* TODO: insert tower preview model */}
+			</viewportframe>
+
+			{/* Locked overlay */}
 			{!unlocked && (
 				<textlabel
 					Text="Locked"
 					Size={UDim2.fromScale(1, 1)}
 					BackgroundTransparency={1}
-					TextColor3={Color3.fromRGB(255, 80, 80)}
+					TextColor3={Color3.fromRGB(255, 0, 0)}
 					TextScaled={true}
+					Font="SourceSansBold"
 				/>
 			)}
-		</frame>
+		</imagebutton>
 	)
 }

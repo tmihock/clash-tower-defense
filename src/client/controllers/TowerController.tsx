@@ -9,7 +9,7 @@ import {
 } from "@rbxts/services"
 import { Tower_C } from "client/classes/Tower_C"
 import { Events, Functions } from "client/networking"
-import { $assert, $print } from "rbxts-transform-debug"
+import { $assert } from "rbxts-transform-debug"
 import { TowerName } from "shared/config/TowerConfig"
 import { EnemyController } from "./EnemyController"
 import { TargetMode } from "shared/networking"
@@ -67,13 +67,10 @@ export class TowerController implements OnStart {
 		const mousePos = atom(new Vector2(0, 0))
 		const hoveredTower = atom<TowerName>("None")
 
-		const root = createRoot(new Instance("Folder"))
+		const root = createRoot(playerGui)
 
 		root.render(
-			createPortal(
-				<TooltipUI hoveredTower={hoveredTower} visibleAtom={visible} mousePosAtom={mousePos} />,
-				playerGui
-			)
+			<TooltipUI hoveredTower={hoveredTower} visibleAtom={visible} mousePosAtom={mousePos} />
 		)
 
 		RunService.RenderStepped.Connect(dt => {

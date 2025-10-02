@@ -1,24 +1,22 @@
 import { TowerName } from "shared/config/TowerConfig"
-import React, { useContext } from "@rbxts/react"
-import { atom, Atom } from "@rbxts/charm"
+import React from "@rbxts/react"
+import { Atom } from "@rbxts/charm"
 import { useAtom } from "@rbxts/react-charm"
-import { useInventory } from "."
+import { useInventory } from "./InventoryContext"
 
 interface Props {
 	index: number
 	tower: TowerName
-	onClick: () => void
+	onClick: (tower: TowerName) => void
 	selectedAtom: Atom<TowerName>
 }
 
 export function EquipSlot({ selectedAtom, index, tower, onClick }: Props) {
 	const selectedTower = useAtom(selectedAtom)
+	const { inventoryOpen, placeInSlot } = useInventory()
+	const invOpen = useAtom(inventoryOpen)
 
 	const isSelected = selectedTower !== "None" && selectedTower === tower
-
-	const { inventoryOpen, placeInSlot } = useInventory()
-
-	const invOpen = useAtom(inventoryOpen)
 
 	return (
 		<imagebutton
@@ -28,7 +26,7 @@ export function EquipSlot({ selectedAtom, index, tower, onClick }: Props) {
 			Event={{
 				MouseButton1Click: () => {
 					if (!invOpen) {
-						onClick()
+						onClick(tower)
 					} else {
 						placeInSlot(index)
 					}
@@ -41,7 +39,9 @@ export function EquipSlot({ selectedAtom, index, tower, onClick }: Props) {
 					Size={new UDim2(1, 0, 1, 0)}
 					BackgroundTransparency={1}
 					Text={tower}
-					TextColor3={Color3.fromRGB(0, 0, 0)}
+					TextColor3={Color3.fromRGB(20, 20, 20)}
+					Font="SourceSansBold"
+					TextScaled={true}
 				/>
 			)}
 
