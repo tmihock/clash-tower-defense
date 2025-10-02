@@ -7,8 +7,10 @@ import { Players, UserInputService } from "@rbxts/services"
 import Signal from "@rbxts/lemon-signal"
 import { createPortal, createRoot } from "@rbxts/react-roblox"
 import React from "@rbxts/react"
-import { EquipBarUI } from "client/ui/EquipBar"
+import { EquipBarUI } from "client/ui/Inventory/EquipBar"
 import { TowerController } from "./TowerController"
+import { Inventory } from "client/ui/Inventory"
+import { atom } from "@rbxts/charm"
 
 const player = Players.LocalPlayer
 const playerGui = player.WaitForChild("PlayerGui") as PlayerGui
@@ -24,12 +26,33 @@ const towerKeys = {
 export class EquipController implements OnStart {
 	public equipBarChanged = new Signal<(equipBar: EquipBar) => void>()
 
+	private unlockedInventoryAtom = atom<Set<TowerName>>(new Set())
+	private inventoryOpenAtom = atom(false)
+
 	private root: ReactRoblox.Root | undefined
 	private equipBar = ["Barbarian", "None", "None", "None"] as EquipBar
 
 	constructor(private towerController: TowerController) {}
 
 	onStart() {
+		Events.setUnlockedInventory.connect(inventory => {
+			this.unlockedInventoryAtom(new Set(inventory))
+		})
+		Events.addToUnlockedInventory.connect(tower => {
+			this.unlockedInventoryAtom(prev => {
+				const newSet = new Set([...prev])
+				newSet.add(tower)
+				return newSet
+			})
+		})
+		Events.removeFromUnlockedInventory.connect(tower => {
+			this.unlockedInventoryAtom(prev => {
+				const newSet = new Set([...prev])
+				newSet.delete(tower)
+				return newSet
+			})
+		})
+
 		Events.setEquipBar.connect(e => this.setEquipBar(e, false))
 		Events.updateEquipBar.connect((i, v) => this.updateEquipBar(i, v, false))
 		this.mountUI()
@@ -55,10 +78,14 @@ export class EquipController implements OnStart {
 
 		this.root.render(
 			createPortal(
-				<EquipBarUI
-					selectedAtom={this.towerController.selectedTower}
-					initial={this.equipBar}
-					onClick={(i, t) => this.onEquipSlotClicked(i, t)}
+				<Inventory
+					visibleAtom={this.inventoryOpenAtom}
+					inventoryAtom={this.unlockedInventoryAtom}
+					equipBarProps={{
+						selectedAtom: this.towerController.selectedTower,
+						initial: this.getEquipBar(),
+						onClick: (i, t) => this.onEquipSlotClicked(i, t)
+					}}
 				/>,
 				playerGui
 			)
@@ -67,7 +94,7 @@ export class EquipController implements OnStart {
 
 	public updateEquipBar(index: number, value: TowerName, tellServer: boolean = true) {
 		$assert(index >= 0 && index <= 4, `Attempt to edit ${index}th item of EquipBar.`)
-		this.getEquipBar(player)![index] = value
+		this.getEquipBar()![index] = value
 		this.equipBarChanged.Fire(this.equipBar)
 		if (tellServer) {
 			Events.updateEquipBar.fire(index, value)
@@ -82,7 +109,7 @@ export class EquipController implements OnStart {
 		}
 	}
 
-	public getEquipBar(player: Player) {
+	public getEquipBar() {
 		const equipBar = this.equipBar
 		$assert(
 			equipBar,

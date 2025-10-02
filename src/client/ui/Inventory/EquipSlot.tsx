@@ -1,7 +1,8 @@
 import { TowerName } from "shared/config/TowerConfig"
-import React from "@rbxts/react"
+import React, { useContext } from "@rbxts/react"
 import { atom, Atom } from "@rbxts/charm"
 import { useAtom } from "@rbxts/react-charm"
+import { useInventory } from "."
 
 interface Props {
 	index: number
@@ -15,13 +16,23 @@ export function EquipSlot({ selectedAtom, index, tower, onClick }: Props) {
 
 	const isSelected = selectedTower !== "None" && selectedTower === tower
 
+	const { inventoryOpen, placeInSlot } = useInventory()
+
+	const invOpen = useAtom(inventoryOpen)
+
 	return (
 		<imagebutton
 			Size={new UDim2(0, 80, 0, 80)}
 			BorderColor3={isSelected ? Color3.fromRGB(255, 255, 150) : Color3.fromRGB(0, 0, 0)}
 			BorderSizePixel={2}
 			Event={{
-				MouseButton1Click: onClick
+				MouseButton1Click: () => {
+					if (!invOpen) {
+						onClick()
+					} else {
+						placeInSlot(index)
+					}
+				}
 			}}
 		>
 			{/* Tower name in center */}

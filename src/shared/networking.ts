@@ -25,6 +25,9 @@ interface ServerEvents {
 
 // Server -> Client events
 interface ClientEvents {
+	// Game
+	healthChanged(value: number): void
+
 	// Enemies
 	enemySpawned(id: number, enemy: EnemyName): void
 	enemyDeleted(id: number): void
@@ -38,9 +41,14 @@ interface ClientEvents {
 	towerAttackedEnemy(towerId: number, enemyId: number): void
 	syncTowers(info: TowerSyncInfo[]): void
 
-	// Inventory / Equip
+	// Equip
 	setEquipBar(equipBar: EquipBar): void
 	updateEquipBar(index: number, value: TowerName): void
+
+	// Inventory
+	setUnlockedInventory(inventory: TowerName[]): void
+	addToUnlockedInventory(tower: TowerName): void
+	removeFromUnlockedInventory(tower: TowerName): void
 }
 
 // Client -> Server -> Client functions
