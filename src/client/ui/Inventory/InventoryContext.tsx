@@ -1,5 +1,5 @@
-import { atom, Atom } from "@rbxts/charm"
-import React, { useState } from "@rbxts/react"
+import { atom, Atom, subscribe } from "@rbxts/charm"
+import React, { useEffect, useState } from "@rbxts/react"
 import { useAtom } from "@rbxts/react-charm"
 import { TowerName } from "shared/config/TowerConfig"
 import { EquipBar } from "shared/networking"
@@ -54,6 +54,13 @@ export function InventoryProvider({
 	}
 
 	const { inventoryOpen } = value
+
+	useEffect(() => {
+		const unsubscribe = subscribe(inventoryOpen, open => {
+			if (!open) setSelectedTower("None")
+		})
+		return () => unsubscribe()
+	}, [inventoryOpen])
 
 	return (
 		<InventoryContext.Provider

@@ -10,11 +10,11 @@ import {
 import { Tower_C } from "client/classes/Tower_C"
 import { Events, Functions } from "client/networking"
 import { $assert } from "rbxts-transform-debug"
-import { TowerName } from "shared/config/TowerConfig"
+import { TowerConfig, TowerName } from "shared/config/TowerConfig"
 import { EnemyController } from "./EnemyController"
 import { TargetMode } from "shared/networking"
 import { atom } from "@rbxts/charm"
-import { createPortal, createRoot } from "@rbxts/react-roblox"
+import { createRoot } from "@rbxts/react-roblox"
 import React from "@rbxts/react"
 import { TAG_TOWER } from "shared/constants"
 import { findFirstAncestorWithTag } from "shared/util/findFirstAncestorWithTag"
@@ -35,6 +35,7 @@ export class TowerController implements OnStart {
 
 	private towers = new Map<number, Tower_C>()
 	private tooltipsEnabled = true
+	private rangePreview = new Instance("Part")
 
 	constructor(
 		private enemyController: EnemyController,
@@ -42,6 +43,15 @@ export class TowerController implements OnStart {
 	) {}
 
 	onStart() {
+		this.rangePreview.Anchored = true
+		this.rangePreview.CanCollide = false
+		this.rangePreview.Transparency = 1
+		this.rangePreview.Material = Enum.Material.Neon
+		this.rangePreview.Color = new Color3(1, 1, 1)
+		this.rangePreview.Parent = Workspace.Preview
+		this.rangePreview.Shape = Enum.PartType.Cylinder
+		this.rangePreview.Orientation = new Vector3(0, 90, 90)
+
 		UserInputService.InputBegan.Connect((input, gpe) => {
 			if (gpe) return
 			// if (input.KeyCode === Enum.KeyCode.E) {
@@ -123,6 +133,8 @@ export class TowerController implements OnStart {
 		this.isPlacing = false
 		this.selectedTower("None")
 		this.mouseStepped?.Disconnect()
+		this.rangePreview.Parent = Workspace.Preview
+		this.rangePreview.Transparency = 1
 		this.previewModel?.Destroy()
 	}
 
@@ -141,9 +153,15 @@ export class TowerController implements OnStart {
 			.filter(i => i.IsA("BasePart"))
 			.forEach(makePartPreview)
 
-		// Create cylinder (shadow) under tower based on hitbox size
 		const previewHitbox = preview.hitbox
-		previewHitbox.Transparency = 0.5
+		previewHitbox.Transparency = 0.9
+
+		const range = TowerConfig[tower].range
+
+		this.rangePreview.PivotTo(previewHitbox.CFrame)
+		this.rangePreview.Size = new Vector3(0.1, range * 2, range * 2)
+		this.rangePreview.Transparency = 0.9
+		this.rangePreview.Parent = preview
 
 		this.mouseStepped = RunService.RenderStepped.Connect(dt => {
 			const pos = this.mouseToTowerPos(tower)

@@ -198,7 +198,7 @@ return {
           </Item>
           <Item class="ModuleScript" referent="6">
             <Properties>
-              <string name="Name">EnemyController</string>
+              <string name="Name">InventoryController</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
               <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
               <ContentId name="LinkedSource">
@@ -210,82 +210,183 @@ return {
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
 local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
 local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
-local Enemy_C = TS.import(script, script.Parent.Parent, "classes", "Enemy_C").Enemy_C
 local Events = TS.import(script, script.Parent.Parent, "networking").Events
-local EnemyController
+local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
+local Players = _services.Players
+local UserInputService = _services.UserInputService
+local Signal = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "lemon-signal", "src").default
+local createRoot = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-roblox").createRoot
+local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
+local Inventory = TS.import(script, script.Parent.Parent, "ui", "Inventory").Inventory
+local atom = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "charm").atom
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local towerKeys = {
+	One = 1,
+	Two = 2,
+	Three = 3,
+	Four = 4,
+}
+local InventoryController
 do
-	EnemyController = setmetatable({}, {
+	InventoryController = setmetatable({}, {
 		__tostring = function()
-			return "EnemyController"
+			return "InventoryController"
 		end,
 	})
-	EnemyController.__index = EnemyController
-	function EnemyController.new(...)
-		local self = setmetatable({}, EnemyController)
+	InventoryController.__index = InventoryController
+	function InventoryController.new(...)
+		local self = setmetatable({}, InventoryController)
 		return self:constructor(...) or self
 	end
-	function EnemyController:constructor()
-		self.enemies = {}
+	function InventoryController:constructor(towerController)
+		self.towerController = towerController
+		self.equipBarChanged = Signal.new()
+		self.unlockedInventoryAtom = atom({})
+		self.inventoryOpenAtom = atom(false)
+		self.equipBar = atom({ "None", "None", "None", "None" })
 	end
-	function EnemyController:onStart()
-		Events.enemySpawned:connect(function(i, e)
-			return self:onEnemySpawned(i, e)
+	function InventoryController:onStart()
+		Events.setUnlockedInventory:connect(function(inventory)
+			local _self = self
+			local _set = {}
+			for _, _v in inventory do
+				_set[_v] = true
+			end
+			_self.unlockedInventoryAtom(_set)
 		end)
-		Events.enemyDeleted:connect(function(i)
-			return self:onEnemyDeleted(i)
+		Events.addToUnlockedInventory:connect(function(tower)
+			self.unlockedInventoryAtom(function(prev)
+				local _set = {}
+				local _array = {}
+				local _length = #_array
+				for _v in prev do
+					_length += 1
+					_array[_length] = _v
+				end
+				for _, _v in _array do
+					_set[_v] = true
+				end
+				local newSet = _set
+				local _tower = tower
+				newSet[_tower] = true
+				return newSet
+			end)
 		end)
-		Events.updateEnemyHealth:connect(function(i, v)
-			return self:onEnemyHealthUpdated(i, v)
+		Events.removeFromUnlockedInventory:connect(function(tower)
+			self.unlockedInventoryAtom(function(prev)
+				local _set = {}
+				local _array = {}
+				local _length = #_array
+				for _v in prev do
+					_length += 1
+					_array[_length] = _v
+				end
+				for _, _v in _array do
+					_set[_v] = true
+				end
+				local newSet = _set
+				local _tower = tower
+				newSet[_tower] = nil
+				return newSet
+			end)
+		end)
+		Events.setEquipBar:connect(function(e)
+			return self:setEquipBar(e, false)
+		end)
+		Events.updateEquipBar:connect(function(i, v)
+			return self:updateEquipBar(i, v, false)
+		end)
+		self:mountUI()
+		UserInputService.InputBegan:Connect(function(input, gpe)
+			if gpe then
+				return nil
+			end
+			--/ FIX: this.equipBar not changing
+			local numberKey = towerKeys[input.KeyCode.Name]
+			if numberKey ~= 0 and numberKey == numberKey and numberKey then
+				local currentTower = self.equipBar()[numberKey]
+				self.towerController:togglePlacingTower(currentTower)
+			end
+			if input.KeyCode == Enum.KeyCode.E then
+				self:toggleInventory()
+			end
 		end)
 	end
-	function EnemyController:getEnemies()
-		local _array = {}
-		local _length = #_array
-		for _k, _v in self.enemies do
-			_length += 1
-			_array[_length] = { _k, _v }
-		end
-		-- ▼ ReadonlyArray.map ▼
-		local _newValue = table.create(#_array)
-		local _callback = function(v)
-			return v[2]
-		end
-		for _k, _v in _array do
-			_newValue[_k] = _callback(_v, _k - 1, _array)
-		end
-		-- ▲ ReadonlyArray.map ▲
-		return _newValue
+	function InventoryController:onEquipSlotClicked(index, tower)
+		print(tower)
+		self.towerController:togglePlacingTower(tower)
 	end
-	function EnemyController:onEnemySpawned(id, enemy)
-		local newEnemy = Enemy_C.new(id, enemy)
-		local _enemies = self.enemies
-		local _id = id
-		_enemies[_id] = newEnemy
+	function InventoryController:toggleInventory(value)
+		if value == nil then
+			self.inventoryOpenAtom(function(v)
+				return not v
+			end)
+		else
+			self.inventoryOpenAtom(value)
+		end
 	end
-	function EnemyController:onEnemyDeleted(id)
-		local _enemies = self.enemies
-		local _id = id
-		_enemies[_id]:destroy()
-		local _enemies_1 = self.enemies
-		local _id_1 = id
-		_enemies_1[_id_1] = nil
+	function InventoryController:mountUI()
+		self.root = createRoot(playerGui)
+		self.root:render(React.createElement(Inventory, {
+			visibleAtom = self.inventoryOpenAtom,
+			inventoryAtom = self.unlockedInventoryAtom,
+			equipBarProps = {
+				selectedAtom = self.towerController.selectedTower,
+				initial = self:getEquipBar(),
+				onClick = function(i, t)
+					return self:onEquipSlotClicked(i, t)
+				end,
+			},
+		}))
 	end
-	function EnemyController:onEnemyHealthUpdated(id, value)
-		print(self.enemies, id)
-		local _enemies = self.enemies
-		local _id = id
-		_enemies[_id].health = value
+	function InventoryController:updateEquipBar(index, value, tellServer)
+		if tellServer == nil then
+			tellServer = true
+		end
+		local _arg0 = index >= 0 and index <= 4
+		local _arg1 = `{"[src/client/controllers/InventoryController.tsx:103]"} {"index >= 0 && index <= 4"}: {`Attempt to edit {index}th item of EquipBar.`}`
+		assert(_arg0, _arg1)
+		self.equipBar(function(prev)
+			local _array = {}
+			local _length = #_array
+			table.move(prev, 1, #prev, _length + 1, _array)
+			local newBar = _array
+			newBar[index + 1] = value
+			return newBar
+		end)
+		self.equipBarChanged:Fire(self.equipBar())
+		if tellServer then
+			Events.updateEquipBar:fire(index, value)
+		end
+	end
+	function InventoryController:setEquipBar(equipBar, tellServer)
+		if tellServer == nil then
+			tellServer = true
+		end
+		self.equipBar(equipBar)
+		self.equipBarChanged:Fire(equipBar)
+		if tellServer then
+			Events.setEquipBar:fire(equipBar)
+		end
+	end
+	function InventoryController:getEquipBar()
+		local equipBar = self.equipBar
+		local _arg1 = `{"[src/client/controllers/InventoryController.tsx:125]"} {"equipBar"}: {`Attempt to get Player "{player.Name}"'s equip bar before their data has loaded.`}`
+		assert(equipBar, _arg1)
+		return equipBar
 	end
 	do
-		-- (Flamework) EnemyController metadata
-		Reflect.defineMetadata(EnemyController, "identifier", "client/controllers/EnemyController@EnemyController")
-		Reflect.defineMetadata(EnemyController, "flamework:implements", { "$:flamework@OnStart" })
+		-- (Flamework) InventoryController metadata
+		Reflect.defineMetadata(InventoryController, "identifier", "client/controllers/InventoryController@InventoryController")
+		Reflect.defineMetadata(InventoryController, "flamework:parameters", { "client/controllers/TowerController@TowerController" })
+		Reflect.defineMetadata(InventoryController, "flamework:implements", { "$:flamework@OnStart" })
 	end
 end
--- (Flamework) EnemyController decorators
-Reflect.decorate(EnemyController, "$:flamework@Controller", Controller, { {} })
+-- (Flamework) InventoryController decorators
+Reflect.decorate(InventoryController, "$:flamework@Controller", Controller, { {} })
 return {
-	EnemyController = EnemyController,
+	InventoryController = InventoryController,
 }
 ]]></string>
               <int64 name="SourceAssetId">-1</int64>
@@ -317,10 +418,9 @@ local Tower_C = TS.import(script, script.Parent.Parent, "classes", "Tower_C").To
 local _networking = TS.import(script, script.Parent.Parent, "networking")
 local Events = _networking.Events
 local Functions = _networking.Functions
+local TowerConfig = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "config", "TowerConfig").TowerConfig
 local atom = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "charm").atom
-local _react_roblox = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-roblox")
-local createPortal = _react_roblox.createPortal
-local createRoot = _react_roblox.createRoot
+local createRoot = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-roblox").createRoot
 local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
 local TAG_TOWER = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "constants").TAG_TOWER
 local findFirstAncestorWithTag = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "util", "findFirstAncestorWithTag").findFirstAncestorWithTag
@@ -349,8 +449,17 @@ do
 		self.selectedTower = atom("None")
 		self.towers = {}
 		self.tooltipsEnabled = true
+		self.rangePreview = Instance.new("Part")
 	end
 	function TowerController:onStart()
+		self.rangePreview.Anchored = true
+		self.rangePreview.CanCollide = false
+		self.rangePreview.Transparency = 1
+		self.rangePreview.Material = Enum.Material.Neon
+		self.rangePreview.Color = Color3.new(1, 1, 1)
+		self.rangePreview.Parent = Workspace.Preview
+		self.rangePreview.Shape = Enum.PartType.Cylinder
+		self.rangePreview.Orientation = Vector3.new(0, 90, 90)
 		UserInputService.InputBegan:Connect(function(input, gpe)
 			if gpe then
 				return nil
@@ -382,12 +491,12 @@ do
 		local visible = atom(true)
 		local mousePos = atom(Vector2.new(0, 0))
 		local hoveredTower = atom("None")
-		local root = createRoot(Instance.new("Folder"))
-		root:render(createPortal(React.createElement(TooltipUI, {
+		local root = createRoot(playerGui)
+		root:render(React.createElement(TooltipUI, {
 			hoveredTower = hoveredTower,
 			visibleAtom = visible,
 			mousePosAtom = mousePos,
-		}), playerGui))
+		}))
 		RunService.RenderStepped:Connect(function(dt)
 			if not self.tooltipsEnabled then
 				return nil
@@ -450,6 +559,8 @@ do
 		if _result ~= nil then
 			_result:Disconnect()
 		end
+		self.rangePreview.Parent = Workspace.Preview
+		self.rangePreview.Transparency = 1
 		local _result_1 = self.previewModel
 		if _result_1 ~= nil then
 			_result_1:Destroy()
@@ -484,9 +595,13 @@ do
 		for _k, _v in _newValue do
 			makePartPreview(_v, _k - 1, _newValue)
 		end
-		-- Create cylinder (shadow) under tower based on hitbox size
 		local previewHitbox = preview.hitbox
-		previewHitbox.Transparency = 0.5
+		previewHitbox.Transparency = 0.9
+		local range = TowerConfig[tower].range
+		self.rangePreview:PivotTo(previewHitbox.CFrame)
+		self.rangePreview.Size = Vector3.new(0.1, range * 2, range * 2)
+		self.rangePreview.Transparency = 0.9
+		self.rangePreview.Parent = preview
 		self.mouseStepped = RunService.RenderStepped:Connect(function(dt)
 			local pos = self:mouseToTowerPos(tower)
 			if pos then
@@ -572,13 +687,13 @@ do
 	function TowerController:confirmTowerPlacement()
 		local selectedTower = self.selectedTower()
 		local _isPlacing = self.isPlacing
-		local _arg1 = `{"[src/client/controllers/TowerController.tsx:234]"} {"this.isPlacing"}: Assertion failed!`
+		local _arg1 = `{"[src/client/controllers/TowerController.tsx:249]"} {"this.isPlacing"}: Assertion failed!`
 		assert(_isPlacing, _arg1)
 		local _arg0 = selectedTower ~= "None"
-		local _arg1_1 = `{"[src/client/controllers/TowerController.tsx:235]"} {'selectedTower !== \"None\"'}: Assertion failed!`
+		local _arg1_1 = `{"[src/client/controllers/TowerController.tsx:250]"} {'selectedTower !== \"None\"'}: Assertion failed!`
 		assert(_arg0, _arg1_1)
 		local placementPos = self:mouseToTowerPos(selectedTower)
-		local _arg1_2 = `{"[src/client/controllers/TowerController.tsx:237]"} {"placementPos"}: {`this.mouseToTowerPos({self.selectedTower}) returned undefined`}`
+		local _arg1_2 = `{"[src/client/controllers/TowerController.tsx:252]"} {"placementPos"}: {`this.mouseToTowerPos({self.selectedTower}) returned undefined`}`
 		assert(placementPos, _arg1_2)
 		local _clone = self.previewModel
 		if _clone ~= nil then
@@ -658,7 +773,7 @@ return {
           </Item>
           <Item class="ModuleScript" referent="8">
             <Properties>
-              <string name="Name">EquipController</string>
+              <string name="Name">HealthController</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
               <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
               <ContentId name="LinkedSource">
@@ -671,115 +786,202 @@ local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_incl
 local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
 local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
 local Events = TS.import(script, script.Parent.Parent, "networking").Events
-local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
-local Players = _services.Players
-local UserInputService = _services.UserInputService
-local Signal = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "lemon-signal", "src").default
-local _react_roblox = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-roblox")
-local createPortal = _react_roblox.createPortal
-local createRoot = _react_roblox.createRoot
+local Players = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services").Players
 local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
-local EquipBarUI = TS.import(script, script.Parent.Parent, "ui", "EquipBar").EquipBarUI
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local towerKeys = {
-	One = 1,
-	Two = 2,
-	Three = 3,
-	Four = 4,
-}
-local EquipController
+local _react_roblox = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-roblox")
+local createRoot = _react_roblox.createRoot
+local createPortal = _react_roblox.createPortal
+local MAX_HEALTH = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "constants").MAX_HEALTH
+local HealthBar = TS.import(script, script.Parent.Parent, "ui", "HealthBar").HealthBar
+local Player = Players.LocalPlayer
+local PlayerGui = Player:FindFirstChildOfClass("PlayerGui") or (Player:WaitForChild("PlayerGui"))
+local HungerController
 do
-	EquipController = setmetatable({}, {
+	HungerController = setmetatable({}, {
 		__tostring = function()
-			return "EquipController"
+			return "HungerController"
 		end,
 	})
-	EquipController.__index = EquipController
-	function EquipController.new(...)
-		local self = setmetatable({}, EquipController)
+	HungerController.__index = HungerController
+	function HungerController.new(...)
+		local self = setmetatable({}, HungerController)
 		return self:constructor(...) or self
 	end
-	function EquipController:constructor(towerController)
-		self.towerController = towerController
-		self.equipBarChanged = Signal.new()
-		self.equipBar = { "Barbarian", "None", "None", "None" }
+	function HungerController:constructor()
+		self.health = MAX_HEALTH
 	end
-	function EquipController:onStart()
-		Events.setEquipBar:connect(function(e)
-			return self:setEquipBar(e, false)
+	function HungerController:getHealth()
+		return self.health
+	end
+	function HungerController:onStart()
+		Events.healthChanged:connect(function(v)
+			return self:onHealthUpdated(v)
 		end)
-		Events.updateEquipBar:connect(function(i, v)
-			return self:updateEquipBar(i, v, false)
-		end)
-		self:mountUI()
-		UserInputService.InputBegan:Connect(function(input, gpe)
-			if gpe then
-				return nil
-			end
-			-- if (input.KeyCode === Enum.KeyCode.E) {
-			-- 	this.togglePlacingTower()
-			-- }
-			local numberKey = towerKeys[input.KeyCode.Name]
-			if numberKey ~= 0 and numberKey == numberKey and numberKey then
-				local currentTower = self.equipBar[numberKey]
-				self.towerController:togglePlacingTower(currentTower)
-			end
-		end)
+		local root = createRoot(Instance.new("Folder"))
+		root:render(createPortal(React.createElement(HealthBar, {
+			initialHealth = self.health,
+		}), PlayerGui))
 	end
-	function EquipController:onEquipSlotClicked(index, tower)
-		self.towerController:togglePlacingTower(tower)
-	end
-	function EquipController:mountUI()
-		self.root = createRoot(Instance.new("Folder"))
-		self.root:render(createPortal(React.createElement(EquipBarUI, {
-			selectedAtom = self.towerController.selectedTower,
-			initial = self.equipBar,
-			onClick = function(i, t)
-				return self:onEquipSlotClicked(i, t)
-			end,
-		}), playerGui))
-	end
-	function EquipController:updateEquipBar(index, value, tellServer)
-		if tellServer == nil then
-			tellServer = true
-		end
-		local _arg0 = index >= 0 and index <= 4
-		local _arg1 = `{"[src/client/controllers/EquipController.tsx:69]"} {"index >= 0 && index <= 4"}: {`Attempt to edit {index}th item of EquipBar.`}`
-		assert(_arg0, _arg1)
-		self:getEquipBar(player)[index + 1] = value
-		self.equipBarChanged:Fire(self.equipBar)
-		if tellServer then
-			Events.updateEquipBar:fire(index, value)
-		end
-	end
-	function EquipController:setEquipBar(equipBar, tellServer)
-		if tellServer == nil then
-			tellServer = true
-		end
-		self.equipBar = equipBar
-		self.equipBarChanged:Fire(equipBar)
-		if tellServer then
-			Events.setEquipBar:fire(equipBar)
-		end
-	end
-	function EquipController:getEquipBar(player)
-		local equipBar = self.equipBar
-		local _arg1 = `{"[src/client/controllers/EquipController.tsx:87]"} {"equipBar"}: {`Attempt to get Player "{player.Name}"'s equip bar before their data has loaded.`}`
-		assert(equipBar, _arg1)
-		return equipBar
+	function HungerController:onHealthUpdated(value)
+		self.health = value
 	end
 	do
-		-- (Flamework) EquipController metadata
-		Reflect.defineMetadata(EquipController, "identifier", "client/controllers/EquipController@EquipController")
-		Reflect.defineMetadata(EquipController, "flamework:parameters", { "client/controllers/TowerController@TowerController" })
-		Reflect.defineMetadata(EquipController, "flamework:implements", { "$:flamework@OnStart" })
+		-- (Flamework) HungerController metadata
+		Reflect.defineMetadata(HungerController, "identifier", "client/controllers/HealthController@HungerController")
+		Reflect.defineMetadata(HungerController, "flamework:implements", { "$:flamework@OnStart" })
 	end
 end
--- (Flamework) EquipController decorators
-Reflect.decorate(EquipController, "$:flamework@Controller", Controller, { {} })
+-- (Flamework) HungerController decorators
+Reflect.decorate(HungerController, "$:flamework@Controller", Controller, { {} })
 return {
-	EquipController = EquipController,
+	HungerController = HungerController,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="9">
+            <Properties>
+              <string name="Name">EnemyController</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local Enemy_C = TS.import(script, script.Parent.Parent, "classes", "Enemy_C").Enemy_C
+local Events = TS.import(script, script.Parent.Parent, "networking").Events
+local EnemyController
+do
+	EnemyController = setmetatable({}, {
+		__tostring = function()
+			return "EnemyController"
+		end,
+	})
+	EnemyController.__index = EnemyController
+	function EnemyController.new(...)
+		local self = setmetatable({}, EnemyController)
+		return self:constructor(...) or self
+	end
+	function EnemyController:constructor()
+		self.enemies = {}
+	end
+	function EnemyController:onStart()
+		Events.enemySpawned:connect(function(i, e)
+			return self:onEnemySpawned(i, e)
+		end)
+		Events.enemyDeleted:connect(function(i)
+			return self:onEnemyDeleted(i)
+		end)
+		Events.updateEnemyHealth:connect(function(i, v)
+			return self:onEnemyHealthUpdated(i, v)
+		end)
+	end
+	function EnemyController:getEnemies()
+		local _array = {}
+		local _length = #_array
+		for _k, _v in self.enemies do
+			_length += 1
+			_array[_length] = { _k, _v }
+		end
+		-- ▼ ReadonlyArray.map ▼
+		local _newValue = table.create(#_array)
+		local _callback = function(v)
+			return v[2]
+		end
+		for _k, _v in _array do
+			_newValue[_k] = _callback(_v, _k - 1, _array)
+		end
+		-- ▲ ReadonlyArray.map ▲
+		return _newValue
+	end
+	function EnemyController:onEnemySpawned(id, enemy)
+		local newEnemy = Enemy_C.new(id, enemy)
+		local _enemies = self.enemies
+		local _id = id
+		_enemies[_id] = newEnemy
+	end
+	function EnemyController:onEnemyDeleted(id)
+		local _enemies = self.enemies
+		local _id = id
+		_enemies[_id]:destroy()
+		local _enemies_1 = self.enemies
+		local _id_1 = id
+		_enemies_1[_id_1] = nil
+	end
+	function EnemyController:onEnemyHealthUpdated(id, value)
+		local _enemies = self.enemies
+		local _id = id
+		_enemies[_id].health = value
+	end
+	do
+		-- (Flamework) EnemyController metadata
+		Reflect.defineMetadata(EnemyController, "identifier", "client/controllers/EnemyController@EnemyController")
+		Reflect.defineMetadata(EnemyController, "flamework:implements", { "$:flamework@OnStart" })
+	end
+end
+-- (Flamework) EnemyController decorators
+Reflect.decorate(EnemyController, "$:flamework@Controller", Controller, { {} })
+return {
+	EnemyController = EnemyController,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="10">
+            <Properties>
+              <string name="Name">GameController</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
+local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
+local atom = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "charm").atom
+local Events = TS.import(script, script.Parent.Parent, "networking").Events
+local GameController
+do
+	GameController = setmetatable({}, {
+		__tostring = function()
+			return "GameController"
+		end,
+	})
+	GameController.__index = GameController
+	function GameController.new(...)
+		local self = setmetatable({}, GameController)
+		return self:constructor(...) or self
+	end
+	function GameController:constructor()
+		self.health = atom(-1)
+	end
+	function GameController:onStart()
+		Events.healthChanged:connect(function(value)
+			return self.health(value)
+		end)
+	end
+	do
+		-- (Flamework) GameController metadata
+		Reflect.defineMetadata(GameController, "identifier", "client/controllers/GameController@GameController")
+		Reflect.defineMetadata(GameController, "flamework:implements", { "$:flamework@OnStart" })
+	end
+end
+-- (Flamework) GameController decorators
+Reflect.decorate(GameController, "$:flamework@Controller", Controller, { {} })
+return {
+	GameController = GameController,
 }
 ]]></string>
               <int64 name="SourceAssetId">-1</int64>
@@ -787,7 +989,7 @@ return {
             </Properties>
           </Item>
         </Item>
-        <Item class="Folder" referent="9">
+        <Item class="Folder" referent="11">
           <Properties>
             <string name="Name">classes</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -796,7 +998,7 @@ return {
             <int64 name="SourceAssetId">-1</int64>
             <BinaryString name="Tags"></BinaryString>
           </Properties>
-          <Item class="ModuleScript" referent="10">
+          <Item class="ModuleScript" referent="12">
             <Properties>
               <string name="Name">Tower_C</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -944,7 +1146,7 @@ return {
               <BinaryString name="Tags"></BinaryString>
             </Properties>
           </Item>
-          <Item class="ModuleScript" referent="11">
+          <Item class="ModuleScript" referent="13">
             <Properties>
               <string name="Name">Enemy_C</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1029,7 +1231,7 @@ return {
             </Properties>
           </Item>
         </Item>
-        <Item class="Folder" referent="12">
+        <Item class="Folder" referent="14">
           <Properties>
             <string name="Name">ui</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1038,9 +1240,9 @@ return {
             <int64 name="SourceAssetId">-1</int64>
             <BinaryString name="Tags"></BinaryString>
           </Properties>
-          <Item class="ModuleScript" referent="13">
+          <Item class="ModuleScript" referent="15">
             <Properties>
-              <string name="Name">EquipBar</string>
+              <string name="Name">Inventory</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
               <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
               <ContentId name="LinkedSource">
@@ -1050,28 +1252,60 @@ return {
               <bool name="DefinesCapabilities">false</bool>
               <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local _react = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
-local React = _react
-local useState = _react.useState
-local EquipSlot = TS.import(script, script, "EquipSlot").EquipSlot
-local function nextTower(tower)
-	return "Barbarian"
+local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
+local EquipBarUI = TS.import(script, script, "EquipBar").EquipBarUI
+local UnlockInventory = TS.import(script, script, "UnlockInventory").UnlockInventory
+local InventoryProvider = TS.import(script, script, "InventoryContext").InventoryProvider
+local function Inventory(_param)
+	local visibleAtom = _param.visibleAtom
+	local inventoryAtom = _param.inventoryAtom
+	local equipBarProps = _param.equipBarProps
+	local _attributes = {
+		value = {
+			unlocked = inventoryAtom,
+			inventoryOpen = visibleAtom,
+			equipBarAtom = equipBarProps.initial,
+		},
+	}
+	local _attributes_1 = table.clone(equipBarProps)
+	setmetatable(_attributes_1, nil)
+	_attributes.children = React.createElement("screengui", {
+		ResetOnSpawn = false,
+		Enabled = true,
+		key = "Inventory",
+	}, React.createElement(EquipBarUI, _attributes_1), React.createElement(UnlockInventory, {
+		inventoryAtom = inventoryAtom,
+	}))
+	return React.createElement(InventoryProvider, _attributes)
 end
+return {
+	Inventory = Inventory,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+            <Item class="ModuleScript" referent="16">
+              <Properties>
+                <string name="Name">EquipBar</string>
+                <BinaryString name="AttributesSerialize"></BinaryString>
+                <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+                <ContentId name="LinkedSource">
+                  <null>
+                  </null>
+                </ContentId>
+                <bool name="DefinesCapabilities">false</bool>
+                <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
+local EquipSlot = TS.import(script, script.Parent, "EquipSlot").EquipSlot
+local useInventory = TS.import(script, script.Parent, "InventoryContext").useInventory
 -- The equip bar with 4 slots
 local function EquipBarUI(_param)
 	local selectedAtom = _param.selectedAtom
-	local initial = _param.initial
 	local onClick = _param.onClick
-	local equipped, setEquipped = useState(initial)
-	local handleClick = function(index)
-		local _array = {}
-		local _length = #_array
-		table.move(equipped, 1, #equipped, _length + 1, _array)
-		local newEquipped = _array
-		newEquipped[index + 1] = nextTower(newEquipped[index + 1])
-		-- setEquipped(newEquipped);
-		onClick(index, equipped[index + 1])
-	end
+	local _binding = useInventory()
+	local equipped = _binding.equipped
 	local _exp = React.createElement("uilistlayout", {
 		FillDirection = Enum.FillDirection.Horizontal,
 		HorizontalAlignment = Enum.HorizontalAlignment.Center,
@@ -1085,8 +1319,8 @@ local function EquipBarUI(_param)
 			index = i,
 			selectedAtom = selectedAtom,
 			tower = tower,
-			onClick = function()
-				return handleClick(i)
+			onClick = function(tower)
+				return onClick(i, tower)
 			end,
 		})
 	end
@@ -1094,23 +1328,22 @@ local function EquipBarUI(_param)
 		_newValue[_k] = _callback(_v, _k - 1, equipped)
 	end
 	-- ▲ ReadonlyArray.map ▲
-	return React.createElement("screengui", {
-		ResetOnSpawn = false,
-		key = "EquipBar",
-	}, React.createElement("frame", {
+	return React.createElement("frame", {
 		Size = UDim2.new(0, 300, 0, 50),
 		Position = UDim2.new(0.5, -150, 1, -100),
 		BackgroundTransparency = 1,
-	}, _exp, _newValue))
+		key = "EquipBar",
+	}, _exp, _newValue)
 end
 return {
 	EquipBarUI = EquipBarUI,
 }
 ]]></string>
-              <int64 name="SourceAssetId">-1</int64>
-              <BinaryString name="Tags"></BinaryString>
-            </Properties>
-            <Item class="ModuleScript" referent="14">
+                <int64 name="SourceAssetId">-1</int64>
+                <BinaryString name="Tags"></BinaryString>
+              </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="17">
               <Properties>
                 <string name="Name">EquipSlot</string>
                 <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1124,25 +1357,38 @@ return {
 local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
 local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
 local useAtom = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-charm").useAtom
+local useInventory = TS.import(script, script.Parent, "InventoryContext").useInventory
 local function EquipSlot(_param)
 	local selectedAtom = _param.selectedAtom
 	local index = _param.index
 	local tower = _param.tower
 	local onClick = _param.onClick
 	local selectedTower = useAtom(selectedAtom)
+	local _binding = useInventory()
+	local inventoryOpen = _binding.inventoryOpen
+	local placeInSlot = _binding.placeInSlot
+	local invOpen = useAtom(inventoryOpen)
 	local isSelected = selectedTower ~= "None" and selectedTower == tower
 	return React.createElement("imagebutton", {
 		Size = UDim2.new(0, 80, 0, 80),
 		BorderColor3 = if isSelected then Color3.fromRGB(255, 255, 150) else Color3.fromRGB(0, 0, 0),
 		BorderSizePixel = 2,
 		Event = {
-			MouseButton1Click = onClick,
+			MouseButton1Click = function()
+				if not invOpen then
+					onClick(tower)
+				else
+					placeInSlot(index)
+				end
+			end,
 		},
 	}, tower ~= "None" and (React.createElement("textlabel", {
 		Size = UDim2.new(1, 0, 1, 0),
 		BackgroundTransparency = 1,
 		Text = tower,
-		TextColor3 = Color3.fromRGB(0, 0, 0),
+		TextColor3 = Color3.fromRGB(20, 20, 20),
+		Font = "SourceSansBold",
+		TextScaled = true,
 	})), React.createElement("textlabel", {
 		Size = UDim2.new(0, 20, 0, 20),
 		Position = UDim2.new(1, -22, 0, 2),
@@ -1163,8 +1409,314 @@ return {
                 <BinaryString name="Tags"></BinaryString>
               </Properties>
             </Item>
+            <Item class="ModuleScript" referent="18">
+              <Properties>
+                <string name="Name">InventoryContext</string>
+                <BinaryString name="AttributesSerialize"></BinaryString>
+                <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+                <ContentId name="LinkedSource">
+                  <null>
+                  </null>
+                </ContentId>
+                <bool name="DefinesCapabilities">false</bool>
+                <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local subscribe = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "charm").subscribe
+local _react = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
+local React = _react
+local useEffect = _react.useEffect
+local useState = _react.useState
+local useAtom = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-charm").useAtom
+local InventoryContext = React.createContext(nil)
+local useInventory = function()
+	local ctx = React.useContext(InventoryContext)
+	if not ctx then
+		error("useInventory must be used within an InventoryProvider")
+	end
+	return ctx
+end
+local function InventoryProvider(_param)
+	local children = _param.children
+	local value = _param.value
+	local equipBarAtom = value.equipBarAtom
+	local unlockedItems = useAtom(value.unlocked)
+	local equipped, setEquipped = useState({ "None", "None", "None", "None" })
+	local selectedTower, setSelectedTower = useState("None")
+	local selectTower = function(tower)
+		return setSelectedTower(tower)
+	end
+	local placeInSlot = function(slotIndex)
+		if selectedTower ~= "None" then
+			local _array = {}
+			local _length = #_array
+			table.move(equipped, 1, #equipped, _length + 1, _array)
+			local newEquipped = _array
+			newEquipped[slotIndex + 1] = selectedTower
+			setEquipped(newEquipped)
+			setSelectedTower("None")
+			equipBarAtom(function(prev)
+				local _array_1 = {}
+				local _length_1 = #_array_1
+				table.move(prev, 1, #prev, _length_1 + 1, _array_1)
+				local newBar = _array_1
+				newBar[slotIndex + 1] = selectedTower
+				return newBar
+			end)
+		end
+	end
+	local _binding = value
+	local inventoryOpen = _binding.inventoryOpen
+	useEffect(function()
+		local unsubscribe = subscribe(inventoryOpen, function(open)
+			if not open then
+				setSelectedTower("None")
+			end
+		end)
+		return function()
+			return unsubscribe()
+		end
+	end, { inventoryOpen })
+	return React.createElement(InventoryContext.Provider, {
+		value = {
+			inventoryOpen = inventoryOpen,
+			unlockedItems = unlockedItems,
+			equipped = equipped,
+			selectedTower = selectedTower,
+			selectTower = selectTower,
+			placeInSlot = placeInSlot,
+			equipBarAtom = equipBarAtom,
+		},
+	}, children)
+end
+return {
+	InventoryProvider = InventoryProvider,
+	useInventory = useInventory,
+}
+]]></string>
+                <int64 name="SourceAssetId">-1</int64>
+                <BinaryString name="Tags"></BinaryString>
+              </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="19">
+              <Properties>
+                <string name="Name">InventoryItem</string>
+                <BinaryString name="AttributesSerialize"></BinaryString>
+                <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+                <ContentId name="LinkedSource">
+                  <null>
+                  </null>
+                </ContentId>
+                <bool name="DefinesCapabilities">false</bool>
+                <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+-- InventoryItem.tsx
+local _react = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
+local React = _react
+local useCallback = _react.useCallback
+local useInventory = TS.import(script, script.Parent, "InventoryContext").useInventory
+local function InventoryItem(_param)
+	local tower = _param.tower
+	local unlocked = _param.unlocked
+	local _binding = useInventory()
+	local selectTower = _binding.selectTower
+	local selectedTower = _binding.selectedTower
+	local isSelected = selectedTower ~= "None" and selectedTower == tower
+	local onClick = useCallback(function()
+		if unlocked then
+			if not isSelected then
+				selectTower(tower)
+			else
+				selectTower("None")
+			end
+		end
+	end, { unlocked, selectedTower, tower, selectTower })
+	return React.createElement("imagebutton", {
+		Size = UDim2.fromOffset(100, 120),
+		BackgroundTransparency = 0,
+		BorderSizePixel = 2,
+		BorderColor3 = if isSelected then Color3.fromRGB(255, 255, 150) else Color3.fromRGB(0, 0, 0),
+		Event = {
+			MouseButton1Click = onClick,
+		},
+	}, React.createElement("textlabel", {
+		Size = UDim2.fromScale(1, 0.15),
+		Position = UDim2.fromScale(0, 0.85),
+		BackgroundTransparency = 1,
+		Text = tower,
+		TextColor3 = if unlocked then Color3.fromRGB(20, 20, 20) else Color3.fromRGB(140, 8, 8),
+		TextScaled = true,
+		Font = "SourceSansBold",
+	}), React.createElement("viewportframe", {
+		Size = UDim2.fromOffset(80, 80),
+		Position = UDim2.fromScale(0.5, 0.1),
+		AnchorPoint = Vector2.new(0.5, 0),
+		BackgroundTransparency = 0.5,
+		BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+	}), not unlocked and (React.createElement("textlabel", {
+		Text = "Locked",
+		Size = UDim2.fromScale(1, 1),
+		BackgroundTransparency = 1,
+		TextColor3 = Color3.fromRGB(255, 0, 0),
+		TextScaled = true,
+		Font = "SourceSansBold",
+	})))
+end
+return {
+	InventoryItem = InventoryItem,
+}
+]]></string>
+                <int64 name="SourceAssetId">-1</int64>
+                <BinaryString name="Tags"></BinaryString>
+              </Properties>
+            </Item>
+            <Item class="ModuleScript" referent="20">
+              <Properties>
+                <string name="Name">UnlockInventory</string>
+                <BinaryString name="AttributesSerialize"></BinaryString>
+                <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+                <ContentId name="LinkedSource">
+                  <null>
+                  </null>
+                </ContentId>
+                <bool name="DefinesCapabilities">false</bool>
+                <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+-- UnlockInventory.tsx
+local useAtom = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-charm").useAtom
+local TowerConfig = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "config", "TowerConfig").TowerConfig
+local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
+local InventoryItem = TS.import(script, script.Parent, "InventoryItem").InventoryItem
+local useInventory = TS.import(script, script.Parent, "InventoryContext").useInventory
+local ALL_TOWERS = {}
+for towerName, info in pairs(TowerConfig) do
+	if towerName ~= "None" then
+		ALL_TOWERS[info.id] = towerName
+	end
+end
+print(ALL_TOWERS)
+local function UnlockInventory(_param)
+	local inventoryAtom = _param.inventoryAtom
+	local _binding = useInventory()
+	local inventoryOpen = _binding.inventoryOpen
+	local inventory = useAtom(inventoryAtom)
+	local visible = useAtom(inventoryOpen)
+	local _exp = React.createElement("uipadding", {
+		PaddingBottom = UDim.new(0, 10),
+		PaddingTop = UDim.new(0, 10),
+		PaddingLeft = UDim.new(0, 10),
+		PaddingRight = UDim.new(0, 10),
+		key = "UiPadding",
+	})
+	local _exp_1 = React.createElement("uigridlayout", {
+		CellSize = UDim2.fromOffset(100, 120),
+		CellPadding = UDim2.fromOffset(10, 10),
+		SortOrder = "Name",
+		key = "UiGridLayout",
+	})
+	-- ▼ ReadonlyArray.map ▼
+	local _newValue = table.create(#ALL_TOWERS)
+	local _callback = function(tower, index)
+		local _attributes = {
+			key = `{index}`,
+			tower = tower,
+		}
+		local _tower = tower
+		_attributes.unlocked = inventory[_tower] ~= nil
+		return React.createElement(InventoryItem, _attributes)
+	end
+	for _k, _v in ALL_TOWERS do
+		_newValue[_k] = _callback(_v, _k - 1, ALL_TOWERS)
+	end
+	-- ▲ ReadonlyArray.map ▲
+	return React.createElement("scrollingframe", {
+		Visible = visible,
+		Size = UDim2.fromScale(0.8, 0.7),
+		Position = UDim2.fromScale(0.1, 0.15),
+		CanvasSize = UDim2.new(0, 0, 0, 0),
+		ScrollBarThickness = 6,
+		BorderSizePixel = 0,
+		BackgroundTransparency = 0.5,
+		key = "ScrollingFrame",
+	}, _exp, _exp_1, _newValue)
+end
+return {
+	UnlockInventory = UnlockInventory,
+}
+]]></string>
+                <int64 name="SourceAssetId">-1</int64>
+                <BinaryString name="Tags"></BinaryString>
+              </Properties>
+            </Item>
           </Item>
-          <Item class="ModuleScript" referent="15">
+          <Item class="ModuleScript" referent="21">
+            <Properties>
+              <string name="Name">HealthBar</string>
+              <BinaryString name="AttributesSerialize"></BinaryString>
+              <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+              <ContentId name="LinkedSource">
+                <null>
+                </null>
+              </ContentId>
+              <bool name="DefinesCapabilities">false</bool>
+              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
+local _react = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
+local React = _react
+local useEffect = _react.useEffect
+local useState = _react.useState
+local useMotion = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "pretty-react-hooks", "out").useMotion
+local Events = TS.import(script, script.Parent.Parent, "networking").Events
+local MAX_HEALTH = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "constants").MAX_HEALTH
+local function HealthBar(_param)
+	local initialHealth = _param.initialHealth
+	local health, setHealth = useState(initialHealth)
+	-- Create animated motion for the fill scale
+	local fillScale, fillScaleMotion = useMotion(math.clamp(initialHealth / 100, 0.05, 1))
+	useEffect(function()
+		local disconnect = Events.healthChanged:connect(function(value)
+			setHealth(value)
+			-- Animate to new fill scale over 1 second
+			local newFillScale = math.clamp(value / MAX_HEALTH, 0.05, 1)
+			fillScaleMotion:spring(newFillScale, {
+				frequency = 0.1,
+				damping = 1,
+			})
+		end)
+		return function()
+			return disconnect:Disconnect()
+		end
+	end, { Events.healthChanged, fillScaleMotion })
+	local _attributes = {
+		Size = UDim2.fromOffset(20, 200),
+	}
+	local _exp = UDim2.fromOffset(10, -30)
+	local _arg0 = UDim2.fromScale(0, 1)
+	_attributes.Position = _exp + _arg0
+	_attributes.AnchorPoint = Vector2.new(0, 1)
+	_attributes.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+	return React.createElement("screengui", {
+		ResetOnSpawn = false,
+		key = "Hunger",
+	}, React.createElement("frame", _attributes, React.createElement("frame", {
+		Size = fillScale:map(function(scale)
+			return UDim2.fromScale(1, scale)
+		end),
+		Position = fillScale:map(function(scale)
+			return UDim2.fromScale(0, 1 - scale)
+		end),
+		AnchorPoint = Vector2.new(0, 0),
+		BackgroundColor3 = Color3.fromRGB(200, 100, 100),
+	})))
+end
+return {
+	HealthBar = HealthBar,
+}
+]]></string>
+              <int64 name="SourceAssetId">-1</int64>
+              <BinaryString name="Tags"></BinaryString>
+            </Properties>
+          </Item>
+          <Item class="ModuleScript" referent="22">
             <Properties>
               <string name="Name">Tooltip</string>
               <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1221,7 +1773,7 @@ return {
             </Properties>
           </Item>
         </Item>
-        <Item class="LocalScript" referent="16">
+        <Item class="LocalScript" referent="23">
           <Properties>
             <string name="Name">main</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1246,25 +1798,7 @@ print("[src/client/main.client.ts:9]", "Flamework client ignited!")
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
-        <Item class="LocalScript" referent="17">
-          <Properties>
-            <string name="Name">setCore</string>
-            <BinaryString name="AttributesSerialize"></BinaryString>
-            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
-            <bool name="Disabled">false</bool>
-            <ContentId name="LinkedSource">
-              <null>
-              </null>
-            </ContentId>
-            <token name="RunContext">0</token>
-            <bool name="DefinesCapabilities">false</bool>
-            <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-]]></string>
-            <int64 name="SourceAssetId">-1</int64>
-            <BinaryString name="Tags"></BinaryString>
-          </Properties>
-        </Item>
-        <Item class="ModuleScript" referent="18">
+        <Item class="ModuleScript" referent="24">
           <Properties>
             <string name="Name">networking</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1281,11 +1815,12 @@ local _networking = TS.import(script, game:GetService("ReplicatedStorage"), "TS"
 local GlobalEvents = _networking.GlobalEvents
 local GlobalFunctions = _networking.GlobalFunctions
 local Events = GlobalEvents:createClient({}, {
-	incomingIds = { "setEquipBar", "updateEquipBar", "enemySpawned", "enemyDeleted", "updateEnemyHealth", "syncEnemies", "towerPlaced", "towerDeleted", "setTowerTargetMode", "towerAttackedEnemy", "syncTowers" },
+	incomingIds = { "setEquipBar", "updateEquipBar", "healthChanged", "enemySpawned", "enemyDeleted", "updateEnemyHealth", "syncEnemies", "towerPlaced", "towerDeleted", "setTowerTargetMode", "towerAttackedEnemy", "syncTowers", "setUnlockedInventory", "addToUnlockedInventory", "removeFromUnlockedInventory" },
 	incoming = {
-		setEquipBar = { { t.array(t.literal("None", "Barbarian")) }, nil },
-		updateEquipBar = { { t.number, t.literal("None", "Barbarian") }, nil },
-		enemySpawned = { { t.number, t.literal("Skeleton", "Armored_Skeleton") }, nil },
+		setEquipBar = { { t.array(t.literalList({ "None", "Barbarian", "Archer", "Cannon", "Sharpshooter" })) }, nil },
+		updateEquipBar = { { t.number, t.literalList({ "None", "Barbarian", "Archer", "Cannon", "Sharpshooter" }) }, nil },
+		healthChanged = { { t.number }, nil },
+		enemySpawned = { { t.number, t.literalList({ "Skeleton", "Armored_Skeleton", "Goblin" }) }, nil },
 		enemyDeleted = { { t.number }, nil },
 		updateEnemyHealth = { { t.number, t.number }, nil },
 		syncEnemies = { { t.array(t.interface({
@@ -1293,7 +1828,7 @@ local Events = GlobalEvents:createClient({}, {
 			elapsed = t.number,
 			pos = t.Vector3,
 		})) }, nil },
-		towerPlaced = { { t.number, t.Vector3, t.literal("None", "Barbarian") }, nil },
+		towerPlaced = { { t.number, t.Vector3, t.literalList({ "None", "Barbarian", "Archer", "Cannon", "Sharpshooter" }) }, nil },
 		towerDeleted = { { t.number }, nil },
 		setTowerTargetMode = { { t.number, t.literalList({ "First", "Last", "Closest" }) }, nil },
 		towerAttackedEnemy = { { t.number, t.number }, nil },
@@ -1301,6 +1836,9 @@ local Events = GlobalEvents:createClient({}, {
 			id = t.number,
 			damageDealt = t.number,
 		})) }, nil },
+		setUnlockedInventory = { { t.array(t.literalList({ "None", "Barbarian", "Archer", "Cannon", "Sharpshooter" })) }, nil },
+		addToUnlockedInventory = { { t.literalList({ "None", "Barbarian", "Archer", "Cannon", "Sharpshooter" }) }, nil },
+		removeFromUnlockedInventory = { { t.literalList({ "None", "Barbarian", "Archer", "Cannon", "Sharpshooter" }) }, nil },
 	},
 	incomingUnreliable = {},
 	outgoingIds = { "setEquipBar", "updateEquipBar" },
@@ -1327,8 +1865,26 @@ return {
             <BinaryString name="Tags"></BinaryString>
           </Properties>
         </Item>
+        <Item class="LocalScript" referent="25">
+          <Properties>
+            <string name="Name">setCore</string>
+            <BinaryString name="AttributesSerialize"></BinaryString>
+            <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
+            <bool name="Disabled">false</bool>
+            <ContentId name="LinkedSource">
+              <null>
+              </null>
+            </ContentId>
+            <token name="RunContext">0</token>
+            <bool name="DefinesCapabilities">false</bool>
+            <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
+]]></string>
+            <int64 name="SourceAssetId">-1</int64>
+            <BinaryString name="Tags"></BinaryString>
+          </Properties>
+        </Item>
       </Item>
-      <Item class="LocalScript" referent="19">
+      <Item class="LocalScript" referent="26">
         <Properties>
           <string name="Name">RbxCharacterSounds</string>
           <BinaryString name="AttributesSerialize"></BinaryString>
@@ -1782,7 +2338,7 @@ Players.PlayerRemoving:Connect(playerRemoving)
           <int64 name="SourceAssetId">-1</int64>
           <BinaryString name="Tags"></BinaryString>
         </Properties>
-        <Item class="ModuleScript" referent="20">
+        <Item class="ModuleScript" referent="27">
           <Properties>
             <string name="Name">AtomicBinding</string>
             <BinaryString name="AttributesSerialize"></BinaryString>
@@ -2075,7 +2631,7 @@ return AtomicBinding
         </Item>
       </Item>
     </Item>
-    <Item class="StarterCharacterScripts" referent="21">
+    <Item class="StarterCharacterScripts" referent="28">
       <Properties>
         <string name="Name">StarterCharacterScripts</string>
         <BinaryString name="AttributesSerialize"></BinaryString>
@@ -2084,1142 +2640,6 @@ return AtomicBinding
         <int64 name="SourceAssetId">-1</int64>
         <BinaryString name="Tags"></BinaryString>
       </Properties>
-    </Item>
-    <Item class="StarterPlayerScripts" referent="22">
-      <Properties>
-        <string name="Name">StarterPlayerScripts</string>
-      </Properties>
-      <Item class="Folder" referent="23">
-        <Properties>
-          <string name="Name">TS</string>
-        </Properties>
-        <Item class="Folder" referent="24">
-          <Properties>
-            <string name="Name">classes</string>
-          </Properties>
-          <Item class="ModuleScript" referent="25">
-            <Properties>
-              <string name="Name">Enemy_C</string>
-              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local Flamework = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Flamework
-local EnemyConfig = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "config", "EnemyConfig").EnemyConfig
-local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
-local ReplicatedStorage = _services.ReplicatedStorage
-local RunService = _services.RunService
-local Workspace = _services.Workspace
-local enemyFolder = ReplicatedStorage.Assets.Enemies
-local Enemy_C
-do
-	Enemy_C = setmetatable({}, {
-		__tostring = function()
-			return "Enemy_C"
-		end,
-	})
-	Enemy_C.__index = Enemy_C
-	function Enemy_C.new(...)
-		local self = setmetatable({}, Enemy_C)
-		return self:constructor(...) or self
-	end
-	function Enemy_C:constructor(id, enemyName)
-		self.id = id
-		self.position = Vector3.one
-		self.timeSpawned = os.clock()
-		self.info = EnemyConfig[enemyName]
-		self.health = self.info.health
-		self.instance = enemyFolder[enemyName]:Clone()
-		self.instance.Parent = Workspace.Enemies
-		self.trackController = Flamework.resolveDependency("client/controllers/TrackController@TrackController")
-		self:startTravel()
-	end
-	function Enemy_C:startTravel()
-		RunService.RenderStepped:Connect(function(dt)
-			local _binding = self.info
-			local speed = _binding.speed
-			local elapsed = os.clock() - self.timeSpawned
-			local pos = self.trackController:getPositionOnTrack(speed, elapsed)
-			-- Approximate movement direction using a small time step
-			local futurePos = self.trackController:getPositionOnTrack(speed, elapsed + dt)
-			local dir = futurePos - pos
-			self:moveTo(pos, dir)
-		end)
-	end
-	function Enemy_C:moveTo(pos, lookDir)
-		self.position = pos
-		if not lookDir or lookDir.Magnitude <= 0 then
-			self.instance:PivotTo(CFrame.new(pos))
-			return nil
-		end
-		-- Current orientation
-		local current = self.instance:GetPivot()
-		-- Target orientation (facing movement direction)
-		local _exp = pos
-		local _pos = pos
-		local _unit = lookDir.Unit
-		local target = CFrame.lookAt(_exp, _pos + _unit)
-		-- Adjust the alpha to control turn speed (closer to 1 = faster snap)
-		local alpha = 0.1
-		local smoothed = current:Lerp(target, alpha)
-		self.instance:PivotTo(smoothed)
-	end
-	function Enemy_C:destroy()
-		self.instance:Destroy()
-	end
-end
-return {
-	Enemy_C = Enemy_C,
-}
-]]></string>
-            </Properties>
-          </Item>
-          <Item class="ModuleScript" referent="26">
-            <Properties>
-              <string name="Name">Tower_C</string>
-              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local TowerConfig = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "config", "TowerConfig").TowerConfig
-local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
-local ReplicatedStorage = _services.ReplicatedStorage
-local RunService = _services.RunService
-local Workspace = _services.Workspace
-local Maid = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "maid", "Maid")
-local towerFolder = ReplicatedStorage.Assets.Towers
-local Tower_C
-do
-	Tower_C = setmetatable({}, {
-		__tostring = function()
-			return "Tower_C"
-		end,
-	})
-	Tower_C.__index = Tower_C
-	function Tower_C.new(...)
-		local self = setmetatable({}, Tower_C)
-		return self:constructor(...) or self
-	end
-	function Tower_C:constructor(id, position, tower, enemyController)
-		self.id = id
-		self.position = position
-		self.enemyController = enemyController
-		self.damageDealt = 0
-		self.targetMode = "First"
-		self.maid = Maid.new()
-		self.info = TowerConfig[tower]
-		local towerInstance = towerFolder[tower]:Clone()
-		towerInstance:PivotTo(CFrame.new(position))
-		towerInstance.Parent = Workspace.Towers
-		self.instance = towerInstance
-		self.maid:GiveTask(RunService.RenderStepped:Connect(function()
-			return self:faceTargetEnemy()
-		end))
-	end
-	function Tower_C:faceTargetEnemy()
-		local targetEnemy = self:findEnemy()
-		if not targetEnemy then
-			return nil
-		end
-		local enemyPos = targetEnemy.position
-		local towerPos = self.instance:GetPivot().Position
-		-- Only rotate left and right
-		local lookAtPos = Vector3.new(enemyPos.X, towerPos.Y, enemyPos.Z)
-		self.instance:PivotTo(CFrame.lookAt(towerPos, lookAtPos))
-	end
-	function Tower_C:findEnemy()
-		local enemies = self.enemyController:getEnemies()
-		if #enemies == 0 then
-			return nil
-		end
-		if self.targetMode == "Closest" then
-			local towerPos = self.position
-			local closestEnemy
-			local closestDistance = self.info.range
-			-- ▼ ReadonlyArray.forEach ▼
-			local _callback = function(enemy)
-				-- GetPivot works on Models (returns CFrame of the root)
-				local enemyPos = enemy.position
-				local distance = (towerPos - enemyPos).Magnitude
-				if distance < closestDistance then
-					closestEnemy = enemy
-					closestDistance = distance
-				end
-			end
-			for _k, _v in enemies do
-				_callback(_v, _k - 1, enemies)
-			end
-			-- ▲ ReadonlyArray.forEach ▲
-			return closestEnemy
-		else
-			local towerPos = self.position
-			-- ▼ ReadonlyArray.filter ▼
-			local _newValue = {}
-			local _callback = function(v)
-				return v.health > 0
-			end
-			local _length = 0
-			for _k, _v in enemies do
-				if _callback(_v, _k - 1, enemies) == true then
-					_length += 1
-					_newValue[_length] = _v
-				end
-			end
-			-- ▲ ReadonlyArray.filter ▲
-			-- ▼ ReadonlyArray.filter ▼
-			local _newValue_1 = {}
-			local _callback_1 = function(enemy)
-				local enemyPos = enemy.position
-				return (towerPos - enemyPos).Magnitude <= self.info.range
-			end
-			local _length_1 = 0
-			for _k, _v in _newValue do
-				if _callback_1(_v, _k - 1, _newValue) == true then
-					_length_1 += 1
-					_newValue_1[_length_1] = _v
-				end
-			end
-			-- ▲ ReadonlyArray.filter ▲
-			local enemiesInRange = _newValue_1
-			if #enemiesInRange == 0 then
-				return nil
-			end
-			-- Pick the enemy with maximum progress (furthest along path)
-			local _arg1 = enemiesInRange[1]
-			-- ▼ ReadonlyArray.reduce ▼
-			local _result = _arg1
-			local _callback_2 = function(best, enemy)
-				local enemyProgress = os.clock() - enemy.timeSpawned
-				local bestProgress = os.clock() - best.timeSpawned
-				if self.targetMode == "First" then
-					return if enemyProgress > bestProgress then enemy else best
-				else
-					-- must be "Last"
-					return if enemyProgress < bestProgress then enemy else best
-				end
-			end
-			for _i = 1, #enemiesInRange do
-				_result = _callback_2(_result, enemiesInRange[_i], _i - 1, enemiesInRange)
-			end
-			-- ▲ ReadonlyArray.reduce ▲
-			return _result
-		end
-	end
-	function Tower_C:destroy()
-		self.instance:Destroy()
-	end
-end
-return {
-	Tower_C = Tower_C,
-}
-]]></string>
-            </Properties>
-          </Item>
-        </Item>
-        <Item class="Folder" referent="27">
-          <Properties>
-            <string name="Name">components</string>
-          </Properties>
-        </Item>
-        <Item class="Folder" referent="28">
-          <Properties>
-            <string name="Name">controllers</string>
-          </Properties>
-          <Item class="ModuleScript" referent="29">
-            <Properties>
-              <string name="Name">EnemyController</string>
-              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
-local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
-local Enemy_C = TS.import(script, script.Parent.Parent, "classes", "Enemy_C").Enemy_C
-local Events = TS.import(script, script.Parent.Parent, "networking").Events
-local EnemyController
-do
-	EnemyController = setmetatable({}, {
-		__tostring = function()
-			return "EnemyController"
-		end,
-	})
-	EnemyController.__index = EnemyController
-	function EnemyController.new(...)
-		local self = setmetatable({}, EnemyController)
-		return self:constructor(...) or self
-	end
-	function EnemyController:constructor()
-		self.enemies = {}
-	end
-	function EnemyController:onStart()
-		Events.enemySpawned:connect(function(i, e)
-			return self:onEnemySpawned(i, e)
-		end)
-		Events.enemyDeleted:connect(function(i)
-			return self:onEnemyDeleted(i)
-		end)
-		Events.updateEnemyHealth:connect(function(i, v)
-			return self:onEnemyHealthUpdated(i, v)
-		end)
-	end
-	function EnemyController:getEnemies()
-		local _array = {}
-		local _length = #_array
-		for _k, _v in self.enemies do
-			_length += 1
-			_array[_length] = { _k, _v }
-		end
-		-- ▼ ReadonlyArray.map ▼
-		local _newValue = table.create(#_array)
-		local _callback = function(v)
-			return v[2]
-		end
-		for _k, _v in _array do
-			_newValue[_k] = _callback(_v, _k - 1, _array)
-		end
-		-- ▲ ReadonlyArray.map ▲
-		return _newValue
-	end
-	function EnemyController:onEnemySpawned(id, enemy)
-		local newEnemy = Enemy_C.new(id, enemy)
-		local _enemies = self.enemies
-		local _id = id
-		_enemies[_id] = newEnemy
-	end
-	function EnemyController:onEnemyDeleted(id)
-		local _enemies = self.enemies
-		local _id = id
-		_enemies[_id]:destroy()
-		local _enemies_1 = self.enemies
-		local _id_1 = id
-		_enemies_1[_id_1] = nil
-	end
-	function EnemyController:onEnemyHealthUpdated(id, value)
-		print(self.enemies, id)
-		local _enemies = self.enemies
-		local _id = id
-		_enemies[_id].health = value
-	end
-	do
-		-- (Flamework) EnemyController metadata
-		Reflect.defineMetadata(EnemyController, "identifier", "client/controllers/EnemyController@EnemyController")
-		Reflect.defineMetadata(EnemyController, "flamework:implements", { "$:flamework@OnStart" })
-	end
-end
--- (Flamework) EnemyController decorators
-Reflect.decorate(EnemyController, "$:flamework@Controller", Controller, { {} })
-return {
-	EnemyController = EnemyController,
-}
-]]></string>
-            </Properties>
-          </Item>
-          <Item class="ModuleScript" referent="30">
-            <Properties>
-              <string name="Name">EquipController</string>
-              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
-local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
-local Events = TS.import(script, script.Parent.Parent, "networking").Events
-local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
-local Players = _services.Players
-local UserInputService = _services.UserInputService
-local Signal = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "lemon-signal", "src").default
-local _react_roblox = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-roblox")
-local createPortal = _react_roblox.createPortal
-local createRoot = _react_roblox.createRoot
-local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
-local EquipBarUI = TS.import(script, script.Parent.Parent, "ui", "EquipBar").EquipBarUI
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local towerKeys = {
-	One = 1,
-	Two = 2,
-	Three = 3,
-	Four = 4,
-}
-local EquipController
-do
-	EquipController = setmetatable({}, {
-		__tostring = function()
-			return "EquipController"
-		end,
-	})
-	EquipController.__index = EquipController
-	function EquipController.new(...)
-		local self = setmetatable({}, EquipController)
-		return self:constructor(...) or self
-	end
-	function EquipController:constructor(towerController)
-		self.towerController = towerController
-		self.equipBarChanged = Signal.new()
-		self.equipBar = { "Barbarian", "None", "None", "None" }
-	end
-	function EquipController:onStart()
-		Events.setEquipBar:connect(function(e)
-			return self:setEquipBar(e, false)
-		end)
-		Events.updateEquipBar:connect(function(i, v)
-			return self:updateEquipBar(i, v, false)
-		end)
-		self:mountUI()
-		UserInputService.InputBegan:Connect(function(input, gpe)
-			if gpe then
-				return nil
-			end
-			-- if (input.KeyCode === Enum.KeyCode.E) {
-			-- 	this.togglePlacingTower()
-			-- }
-			local numberKey = towerKeys[input.KeyCode.Name]
-			if numberKey ~= 0 and numberKey == numberKey and numberKey then
-				local currentTower = self.equipBar[numberKey]
-				self.towerController:togglePlacingTower(currentTower)
-			end
-		end)
-	end
-	function EquipController:onEquipSlotClicked(index, tower)
-		self.towerController:togglePlacingTower(tower)
-	end
-	function EquipController:mountUI()
-		self.root = createRoot(Instance.new("Folder"))
-		self.root:render(createPortal(React.createElement(EquipBarUI, {
-			selectedAtom = self.towerController.selectedTower,
-			initial = self.equipBar,
-			onClick = function(i, t)
-				return self:onEquipSlotClicked(i, t)
-			end,
-		}), playerGui))
-	end
-	function EquipController:updateEquipBar(index, value, tellServer)
-		if tellServer == nil then
-			tellServer = true
-		end
-		local _arg0 = index >= 0 and index <= 4
-		local _arg1 = `{"[src/client/controllers/EquipController.tsx:69]"} {"index >= 0 && index <= 4"}: {`Attempt to edit {index}th item of EquipBar.`}`
-		assert(_arg0, _arg1)
-		self:getEquipBar(player)[index + 1] = value
-		self.equipBarChanged:Fire(self.equipBar)
-		if tellServer then
-			Events.updateEquipBar:fire(index, value)
-		end
-	end
-	function EquipController:setEquipBar(equipBar, tellServer)
-		if tellServer == nil then
-			tellServer = true
-		end
-		self.equipBar = equipBar
-		self.equipBarChanged:Fire(equipBar)
-		if tellServer then
-			Events.setEquipBar:fire(equipBar)
-		end
-	end
-	function EquipController:getEquipBar(player)
-		local equipBar = self.equipBar
-		local _arg1 = `{"[src/client/controllers/EquipController.tsx:87]"} {"equipBar"}: {`Attempt to get Player "{player.Name}"'s equip bar before their data has loaded.`}`
-		assert(equipBar, _arg1)
-		return equipBar
-	end
-	do
-		-- (Flamework) EquipController metadata
-		Reflect.defineMetadata(EquipController, "identifier", "client/controllers/EquipController@EquipController")
-		Reflect.defineMetadata(EquipController, "flamework:parameters", { "client/controllers/TowerController@TowerController" })
-		Reflect.defineMetadata(EquipController, "flamework:implements", { "$:flamework@OnStart" })
-	end
-end
--- (Flamework) EquipController decorators
-Reflect.decorate(EquipController, "$:flamework@Controller", Controller, { {} })
-return {
-	EquipController = EquipController,
-}
-]]></string>
-            </Properties>
-          </Item>
-          <Item class="ModuleScript" referent="31">
-            <Properties>
-              <string name="Name">TowerController</string>
-              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
-local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
-local _services = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services")
-local CollectionService = _services.CollectionService
-local Players = _services.Players
-local ReplicatedStorage = _services.ReplicatedStorage
-local RunService = _services.RunService
-local UserInputService = _services.UserInputService
-local Workspace = _services.Workspace
-local Tower_C = TS.import(script, script.Parent.Parent, "classes", "Tower_C").Tower_C
-local _networking = TS.import(script, script.Parent.Parent, "networking")
-local Events = _networking.Events
-local Functions = _networking.Functions
-local atom = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "charm").atom
-local _react_roblox = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-roblox")
-local createPortal = _react_roblox.createPortal
-local createRoot = _react_roblox.createRoot
-local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
-local TAG_TOWER = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "constants").TAG_TOWER
-local findFirstAncestorWithTag = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "util", "findFirstAncestorWithTag").findFirstAncestorWithTag
-local TooltipUI = TS.import(script, script.Parent.Parent, "ui", "Tooltip").TooltipUI
-local player = Players.LocalPlayer
-local playerGui = player:WaitForChild("PlayerGui")
-local camera = Workspace.CurrentCamera
-local towerFolder = ReplicatedStorage.Assets.Towers
-local makePartPreview
-local TowerController
-do
-	TowerController = setmetatable({}, {
-		__tostring = function()
-			return "TowerController"
-		end,
-	})
-	TowerController.__index = TowerController
-	function TowerController.new(...)
-		local self = setmetatable({}, TowerController)
-		return self:constructor(...) or self
-	end
-	function TowerController:constructor(enemyController, trackController)
-		self.enemyController = enemyController
-		self.trackController = trackController
-		self.isPlacing = false
-		self.selectedTower = atom("None")
-		self.towers = {}
-		self.tooltipsEnabled = true
-	end
-	function TowerController:onStart()
-		UserInputService.InputBegan:Connect(function(input, gpe)
-			if gpe then
-				return nil
-			end
-			-- if (input.KeyCode === Enum.KeyCode.E) {
-			-- 	this.togglePlacingTower()
-			-- }
-			if input.KeyCode then
-				if input.UserInputType == Enum.UserInputType.MouseButton1 and self.isPlacing then
-					self:confirmTowerPlacement()
-				end
-			end
-		end)
-		Events.towerPlaced:connect(function(i, p, t)
-			return self:onTowerPlaced(i, p, t)
-		end)
-		Events.towerDeleted:connect(function(i)
-			return self:onTowerDeleted(i)
-		end)
-		Events.towerAttackedEnemy:connect(function(t, e)
-			return self:onTowerAttackedEnemy(t, e)
-		end)
-		Events.setTowerTargetMode:connect(function(i, t)
-			return self:onTowerTargetModeChanged(i, t)
-		end)
-		self:enableTowerTooltips()
-	end
-	function TowerController:enableTowerTooltips()
-		local visible = atom(true)
-		local mousePos = atom(Vector2.new(0, 0))
-		local hoveredTower = atom("None")
-		local root = createRoot(Instance.new("Folder"))
-		root:render(createPortal(React.createElement(TooltipUI, {
-			hoveredTower = hoveredTower,
-			visibleAtom = visible,
-			mousePosAtom = mousePos,
-		}), playerGui))
-		RunService.RenderStepped:Connect(function(dt)
-			if not self.tooltipsEnabled then
-				return nil
-			end
-			if self.isPlacing then
-				return nil
-			end
-			local _binding = UserInputService:GetMouseLocation()
-			local X = _binding.X
-			local Y = _binding.Y
-			local _binding_1 = camera:ViewportPointToRay(X, Y)
-			local Origin = _binding_1.Origin
-			local Direction = _binding_1.Direction
-			local rayParams = RaycastParams.new()
-			rayParams.FilterType = Enum.RaycastFilterType.Include
-			rayParams.FilterDescendantsInstances = CollectionService:GetTagged(TAG_TOWER)
-			local rayResult = Workspace:Raycast(Origin, Direction * 1000, rayParams)
-			if rayResult then
-				local tower = findFirstAncestorWithTag(rayResult.Instance, TAG_TOWER)
-				visible(true)
-				mousePos(Vector2.new(X, Y))
-				hoveredTower(if tower then (tower.Name) else "None")
-			else
-				visible(false)
-			end
-		end)
-	end
-	function TowerController:onTowerTargetModeChanged(id, mode)
-		local _towers = self.towers
-		local _id = id
-		local tower = _towers[_id]
-		tower.targetMode = mode
-	end
-	function TowerController:onTowerPlaced(id, pos, tower)
-		local newTower = Tower_C.new(id, pos, tower, self.enemyController)
-		local _towers = self.towers
-		local _id = id
-		_towers[_id] = newTower
-	end
-	function TowerController:onTowerDeleted(id)
-		local _towers = self.towers
-		local _id = id
-		_towers[_id]:destroy()
-		local _towers_1 = self.towers
-		local _id_1 = id
-		_towers_1[_id_1] = nil
-	end
-	function TowerController:onTowerAttackedEnemy(towerId, enemyId)
-		local _towers = self.towers
-		local _towerId = towerId
-		local tower = _towers[_towerId]
-		if tower then
-			tower.damageDealt += tower.info.damage
-		end
-	end
-	function TowerController:stopPlacingTower()
-		self.isPlacing = false
-		self.selectedTower("None")
-		local _result = self.mouseStepped
-		if _result ~= nil then
-			_result:Disconnect()
-		end
-		local _result_1 = self.previewModel
-		if _result_1 ~= nil then
-			_result_1:Destroy()
-		end
-	end
-	function TowerController:startPlacingTower(tower)
-		if self.isPlacing then
-			self:stopPlacingTower()
-		end
-		if tower == "None" then
-			return nil
-		end
-		self.selectedTower(tower)
-		self.isPlacing = true
-		local preview = towerFolder[tower]:Clone()
-		self.previewModel = preview
-		preview.Parent = Workspace.Preview
-		local _exp = preview:GetDescendants()
-		-- ▼ ReadonlyArray.filter ▼
-		local _newValue = {}
-		local _callback = function(i)
-			return i:IsA("BasePart")
-		end
-		local _length = 0
-		for _k, _v in _exp do
-			if _callback(_v, _k - 1, _exp) == true then
-				_length += 1
-				_newValue[_length] = _v
-			end
-		end
-		-- ▲ ReadonlyArray.filter ▲
-		for _k, _v in _newValue do
-			makePartPreview(_v, _k - 1, _newValue)
-		end
-		-- Create cylinder (shadow) under tower based on hitbox size
-		local previewHitbox = preview.hitbox
-		previewHitbox.Transparency = 0.5
-		self.mouseStepped = RunService.RenderStepped:Connect(function(dt)
-			local pos = self:mouseToTowerPos(tower)
-			if pos then
-				if self:canPlace() then
-					previewHitbox.Color = Color3.new(0, 1, 0)
-				else
-					previewHitbox.Color = Color3.new(1, 0, 0)
-				end
-				preview:MoveTo(pos)
-			end
-		end)
-	end
-	function TowerController:canPlace()
-		local mousePos = self:mouseToTowerPos(self.selectedTower())
-		return mousePos ~= nil and self:posNotOnTrackOrTower(mousePos) and self.isPlacing
-	end
-	function TowerController:posNotOnTrackOrTower(pos)
-		return self:posNotOnTower(pos) and self:posNotOnTrack(pos)
-	end
-	function TowerController:posNotOnTrack(pos)
-		local path = self.trackController:getTrack().path:GetChildren()
-		local tower = self.selectedTower()
-		local radius = towerFolder[tower].hitbox.Size.Y / 2
-		for _, part in path do
-			local halfSizeX = part.Size.X / 2
-			local halfSizeZ = part.Size.Z / 2
-			local minX = part.Position.X - halfSizeX
-			local maxX = part.Position.X + halfSizeX
-			local minZ = part.Position.Z - halfSizeZ
-			local maxZ = part.Position.Z + halfSizeZ
-			local closestX = math.clamp(pos.X, minX, maxX)
-			local closestZ = math.clamp(pos.Z, minZ, maxZ)
-			local dx = pos.X - closestX
-			local dz = pos.Z - closestZ
-			if dx * dx + dz * dz < radius * radius then
-				return false
-			end
-		end
-		return true
-	end
-	function TowerController:posNotOnTower(pos)
-		local tower = self.selectedTower()
-		local radius = towerFolder[tower].hitbox.Size.Y / 2
-		local _exp = Workspace.Towers:GetChildren()
-		-- ▼ ReadonlyArray.map ▼
-		local _newValue = table.create(#_exp)
-		local _callback = function(t)
-			return t:FindFirstChild("hitbox")
-		end
-		for _k, _v in _exp do
-			_newValue[_k] = _callback(_v, _k - 1, _exp)
-		end
-		-- ▲ ReadonlyArray.map ▲
-		-- ▼ ReadonlyArray.filter ▼
-		local _newValue_1 = {}
-		local _callback_1 = function(t)
-			return t:IsA("BasePart")
-		end
-		local _length = 0
-		for _k, _v in _newValue do
-			if _callback_1(_v, _k - 1, _newValue) == true then
-				_length += 1
-				_newValue_1[_length] = _v
-			end
-		end
-		-- ▲ ReadonlyArray.filter ▲
-		local towerHitboxes = _newValue_1
-		local px = pos.X
-		local pz = pos.Z
-		for _, hitbox in towerHitboxes do
-			-- defensive: ensure we have a valid BasePart
-			if not hitbox or not hitbox:IsA("BasePart") then
-				continue
-			end
-			local dx = px - hitbox.Position.X
-			local dz = pz - hitbox.Position.Z
-			if dx * dx + dz * dz < radius * radius then
-				return false
-			end
-		end
-		return true
-	end
-	function TowerController:confirmTowerPlacement()
-		local selectedTower = self.selectedTower()
-		local _isPlacing = self.isPlacing
-		local _arg1 = `{"[src/client/controllers/TowerController.tsx:234]"} {"this.isPlacing"}: Assertion failed!`
-		assert(_isPlacing, _arg1)
-		local _arg0 = selectedTower ~= "None"
-		local _arg1_1 = `{"[src/client/controllers/TowerController.tsx:235]"} {'selectedTower !== \"None\"'}: Assertion failed!`
-		assert(_arg0, _arg1_1)
-		local placementPos = self:mouseToTowerPos(selectedTower)
-		local _arg1_2 = `{"[src/client/controllers/TowerController.tsx:237]"} {"placementPos"}: {`this.mouseToTowerPos({self.selectedTower}) returned undefined`}`
-		assert(placementPos, _arg1_2)
-		local _clone = self.previewModel
-		if _clone ~= nil then
-			_clone = _clone:Clone()
-		end
-		local clone = _clone
-		Functions.placeTower:invoke(placementPos, selectedTower):andThen(function(wasPlaced)
-			if wasPlaced then
-				local _result = clone
-				if _result ~= nil then
-					_result:Destroy()
-				end
-			else
-				-- Failed, make clone red then destroy or seomthing
-				local _result = clone
-				if _result ~= nil then
-					_result:Destroy()
-				end
-			end
-		end)
-	end
-	function TowerController:mouseToTowerPos(tower)
-		local _binding = UserInputService:GetMouseLocation()
-		local X = _binding.X
-		local Y = _binding.Y
-		local _binding_1 = camera:ViewportPointToRay(X, Y)
-		local Origin = _binding_1.Origin
-		local Direction = _binding_1.Direction
-		local rayParams = RaycastParams.new()
-		rayParams.FilterType = Enum.RaycastFilterType.Exclude
-		rayParams.FilterDescendantsInstances = { Workspace.Preview, Workspace.Live, Workspace.Towers }
-		local rayResult = Workspace:Raycast(Origin, Direction * 1000, rayParams)
-		if rayResult then
-			local _binding_2 = rayResult.Position
-			local X = _binding_2.X
-			local Z = _binding_2.Z
-			local worldSize = towerFolder[tower]:GetExtentsSize()
-			local Y = rayResult.Position.Y + worldSize.Y / 2
-			return Vector3.new(X, Y, Z)
-		end
-	end
-	function TowerController:togglePlacingTower(tower, toggle)
-		if toggle == nil then
-			toggle = not self.isPlacing
-		end
-		if self.isPlacing then
-			self:stopPlacingTower()
-		else
-			self:startPlacingTower(tower)
-		end
-		return self.isPlacing
-	end
-	do
-		-- (Flamework) TowerController metadata
-		Reflect.defineMetadata(TowerController, "identifier", "client/controllers/TowerController@TowerController")
-		Reflect.defineMetadata(TowerController, "flamework:parameters", { "client/controllers/EnemyController@EnemyController", "client/controllers/TrackController@TrackController" })
-		Reflect.defineMetadata(TowerController, "flamework:implements", { "$:flamework@OnStart" })
-	end
-end
--- (Flamework) TowerController decorators
-Reflect.decorate(TowerController, "$:flamework@Controller", Controller, { {} })
-function makePartPreview(part)
-	if part.Name == "hitbox" then
-		return nil
-	end
-	part.Transparency = 0.5
-	part.CanCollide = false
-	part.CanQuery = false
-end
-return {
-	TowerController = TowerController,
-}
-]]></string>
-            </Properties>
-          </Item>
-          <Item class="ModuleScript" referent="32">
-            <Properties>
-              <string name="Name">TrackController</string>
-              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local Reflect = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Reflect
-local Controller = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Controller
-local CollectionService = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "services").CollectionService
-local TAG_TRACK = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "constants").TAG_TRACK
-local TrackController
-do
-	TrackController = setmetatable({}, {
-		__tostring = function()
-			return "TrackController"
-		end,
-	})
-	TrackController.__index = TrackController
-	function TrackController.new(...)
-		local self = setmetatable({}, TrackController)
-		return self:constructor(...) or self
-	end
-	function TrackController:constructor()
-		self.waypoints = {}
-		self.trackLength = -1
-		self.trackInstance = nil
-	end
-	function TrackController:onInit()
-		--[[
-			*
-			         * Change to wait for all waypoints to load in
-			         
-		]]
-		task.wait(1)
-	end
-	function TrackController:onStart()
-		local trackInstance = CollectionService:GetTagged(TAG_TRACK)[1]
-		local _exp = trackInstance.waypoints:GetChildren()
-		table.sort(_exp, function(a, b)
-			return tonumber(a.Name) < tonumber(b.Name)
-		end)
-		-- ▼ ReadonlyArray.map ▼
-		local _newValue = table.create(#_exp)
-		local _callback = function(i)
-			return i.Position
-		end
-		for _k, _v in _exp do
-			_newValue[_k] = _callback(_v, _k - 1, _exp)
-		end
-		-- ▲ ReadonlyArray.map ▲
-		self.waypoints = _newValue
-		local total = 0
-		for i = 0, #self.waypoints - 2 do
-			local _exp_1 = self.waypoints[i + 2]
-			local _arg0 = self.waypoints[i + 1]
-			total += (_exp_1 - _arg0).Magnitude
-		end
-		self.trackLength = total
-		self.trackInstance = trackInstance
-	end
-	function TrackController:getWaypoints()
-		return self.waypoints
-	end
-	function TrackController:getTrack()
-		return self.trackInstance
-	end
-	function TrackController:getTrackLength()
-		return self.trackLength
-	end
-	function TrackController:getPositionOnTrack(speed, t)
-		local d = speed * t
-		local distAccum = 0
-		for i = 0, #self.waypoints - 2 do
-			local a = self.waypoints[i + 1]
-			local b = self.waypoints[i + 2]
-			local L = (b - a).Magnitude
-			if d <= distAccum + L then
-				local segDist = d - distAccum
-				local alpha = segDist / L
-				return a:Lerp(b, alpha)
-			end
-			distAccum += L
-		end
-		-- Clamp to the last waypoint if we've passed the end
-		return self.waypoints[#self.waypoints]
-	end
-	do
-		-- (Flamework) TrackController metadata
-		Reflect.defineMetadata(TrackController, "identifier", "client/controllers/TrackController@TrackController")
-		Reflect.defineMetadata(TrackController, "flamework:implements", { "$:flamework@OnInit", "$:flamework@OnStart" })
-	end
-end
--- (Flamework) TrackController decorators
-Reflect.decorate(TrackController, "$:flamework@Controller", Controller, { {} })
-return {
-	TrackController = TrackController,
-}
-]]></string>
-            </Properties>
-          </Item>
-        </Item>
-        <Item class="LocalScript" referent="33">
-          <Properties>
-            <string name="Name">main</string>
-            <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local Flamework = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out").Flamework
-Flamework._addPaths({ { "StarterPlayer", "StarterPlayerScripts", "TS", "classes" } })
-Flamework._addPaths({ { "StarterPlayer", "StarterPlayerScripts", "TS", "controllers" } })
-Flamework._addPaths({ { "StarterPlayer", "StarterPlayerScripts", "TS", "components" } })
-Flamework.ignite()
-print("[src/client/main.client.ts:9]", "Flamework client ignited!")
-]]></string>
-          </Properties>
-        </Item>
-        <Item class="ModuleScript" referent="34">
-          <Properties>
-            <string name="Name">networking</string>
-            <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local t = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@flamework", "core", "out", "prelude").t
-local _networking = TS.import(script, game:GetService("ReplicatedStorage"), "TS", "networking")
-local GlobalEvents = _networking.GlobalEvents
-local GlobalFunctions = _networking.GlobalFunctions
-local Events = GlobalEvents:createClient({}, {
-	incomingIds = { "setEquipBar", "updateEquipBar", "enemySpawned", "enemyDeleted", "updateEnemyHealth", "syncEnemies", "towerPlaced", "towerDeleted", "setTowerTargetMode", "towerAttackedEnemy", "syncTowers" },
-	incoming = {
-		setEquipBar = { { t.array(t.literal("None", "Barbarian")) }, nil },
-		updateEquipBar = { { t.number, t.literal("None", "Barbarian") }, nil },
-		enemySpawned = { { t.number, t.literal("Skeleton", "Armored_Skeleton") }, nil },
-		enemyDeleted = { { t.number }, nil },
-		updateEnemyHealth = { { t.number, t.number }, nil },
-		syncEnemies = { { t.array(t.interface({
-			id = t.number,
-			elapsed = t.number,
-			pos = t.Vector3,
-		})) }, nil },
-		towerPlaced = { { t.number, t.Vector3, t.literal("None", "Barbarian") }, nil },
-		towerDeleted = { { t.number }, nil },
-		setTowerTargetMode = { { t.number, t.literalList({ "First", "Last", "Closest" }) }, nil },
-		towerAttackedEnemy = { { t.number, t.number }, nil },
-		syncTowers = { { t.array(t.interface({
-			id = t.number,
-			damageDealt = t.number,
-		})) }, nil },
-	},
-	incomingUnreliable = {},
-	outgoingIds = { "setEquipBar", "updateEquipBar" },
-	outgoingUnreliable = {},
-	namespaceIds = {},
-	namespaces = {},
-})
-local Functions = GlobalFunctions:createClient({}, {
-	incomingIds = {},
-	incoming = {},
-	outgoingIds = { "placeTower" },
-	outgoing = {
-		placeTower = t.boolean,
-	},
-	namespaceIds = {},
-	namespaces = {},
-})
-return {
-	Events = Events,
-	Functions = Functions,
-}
-]]></string>
-          </Properties>
-        </Item>
-        <Item class="LocalScript" referent="35">
-          <Properties>
-            <string name="Name">setCore</string>
-            <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-]]></string>
-          </Properties>
-        </Item>
-        <Item class="Folder" referent="36">
-          <Properties>
-            <string name="Name">ui</string>
-          </Properties>
-          <Item class="ModuleScript" referent="37">
-            <Properties>
-              <string name="Name">EquipBar</string>
-              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local _react = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
-local React = _react
-local useState = _react.useState
-local EquipSlot = TS.import(script, script, "EquipSlot").EquipSlot
-local function nextTower(tower)
-	return "Barbarian"
-end
--- The equip bar with 4 slots
-local function EquipBarUI(_param)
-	local selectedAtom = _param.selectedAtom
-	local initial = _param.initial
-	local onClick = _param.onClick
-	local equipped, setEquipped = useState(initial)
-	local handleClick = function(index)
-		local _array = {}
-		local _length = #_array
-		table.move(equipped, 1, #equipped, _length + 1, _array)
-		local newEquipped = _array
-		newEquipped[index + 1] = nextTower(newEquipped[index + 1])
-		-- setEquipped(newEquipped);
-		onClick(index, equipped[index + 1])
-	end
-	local _exp = React.createElement("uilistlayout", {
-		FillDirection = Enum.FillDirection.Horizontal,
-		HorizontalAlignment = Enum.HorizontalAlignment.Center,
-		Padding = UDim.new(0, 8),
-	})
-	-- ▼ ReadonlyArray.map ▼
-	local _newValue = table.create(#equipped)
-	local _callback = function(tower, i)
-		return React.createElement(EquipSlot, {
-			key = i,
-			index = i,
-			selectedAtom = selectedAtom,
-			tower = tower,
-			onClick = function()
-				return handleClick(i)
-			end,
-		})
-	end
-	for _k, _v in equipped do
-		_newValue[_k] = _callback(_v, _k - 1, equipped)
-	end
-	-- ▲ ReadonlyArray.map ▲
-	return React.createElement("screengui", {
-		ResetOnSpawn = false,
-		key = "EquipBar",
-	}, React.createElement("frame", {
-		Size = UDim2.new(0, 300, 0, 50),
-		Position = UDim2.new(0.5, -150, 1, -100),
-		BackgroundTransparency = 1,
-	}, _exp, _newValue))
-end
-return {
-	EquipBarUI = EquipBarUI,
-}
-]]></string>
-            </Properties>
-            <Item class="ModuleScript" referent="38">
-              <Properties>
-                <string name="Name">EquipSlot</string>
-                <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
-local useAtom = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-charm").useAtom
-local function EquipSlot(_param)
-	local selectedAtom = _param.selectedAtom
-	local index = _param.index
-	local tower = _param.tower
-	local onClick = _param.onClick
-	local selectedTower = useAtom(selectedAtom)
-	local isSelected = selectedTower ~= "None" and selectedTower == tower
-	return React.createElement("imagebutton", {
-		Size = UDim2.new(0, 80, 0, 80),
-		BorderColor3 = if isSelected then Color3.fromRGB(255, 255, 150) else Color3.fromRGB(0, 0, 0),
-		BorderSizePixel = 2,
-		Event = {
-			MouseButton1Click = onClick,
-		},
-	}, tower ~= "None" and (React.createElement("textlabel", {
-		Size = UDim2.new(1, 0, 1, 0),
-		BackgroundTransparency = 1,
-		Text = tower,
-		TextColor3 = Color3.fromRGB(0, 0, 0),
-	})), React.createElement("textlabel", {
-		Size = UDim2.new(0, 20, 0, 20),
-		Position = UDim2.new(1, -22, 0, 2),
-		BackgroundTransparency = 1,
-		Text = tostring(index + 1),
-		TextColor3 = Color3.fromRGB(0, 0, 0),
-		TextXAlignment = "Right",
-		TextYAlignment = "Top",
-		Font = "SourceSansBold",
-		TextSize = 16,
-	}))
-end
-return {
-	EquipSlot = EquipSlot,
-}
-]]></string>
-              </Properties>
-            </Item>
-          </Item>
-          <Item class="ModuleScript" referent="39">
-            <Properties>
-              <string name="Name">Tooltip</string>
-              <string name="Source"><![CDATA[-- Compiled with roblox-ts v3.0.0
-local TS = require(game:GetService("ReplicatedStorage"):WaitForChild("rbxts_include"):WaitForChild("RuntimeLib"))
-local React = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react")
-local useAtom = TS.import(script, game:GetService("ReplicatedStorage"), "rbxts_include", "node_modules", "@rbxts", "react-charm").useAtom
-local function TooltipUI(_param)
-	local hoveredTower = _param.hoveredTower
-	local visibleAtom = _param.visibleAtom
-	local mousePosAtom = _param.mousePosAtom
-	local visible = useAtom(visibleAtom)
-	local tower = useAtom(hoveredTower)
-	local _binding = useAtom(mousePosAtom)
-	local X = _binding.X
-	local Y = _binding.Y
-	return React.createElement("screengui", {
-		ResetOnSpawn = false,
-		key = "ToolTipGUI",
-		IgnoreGuiInset = true,
-		Enabled = visible,
-	}, React.createElement("frame", {
-		key = "TooltipContainer",
-		AnchorPoint = Vector2.new(0, 0),
-		Position = UDim2.fromOffset(X + 10, Y + 5),
-		Size = UDim2.fromOffset(75, 40),
-		BackgroundTransparency = 1,
-		ZIndex = 10,
-	}, React.createElement("textlabel", {
-		key = "TooltipText",
-		Size = UDim2.fromScale(1, 1),
-		BackgroundTransparency = 1,
-		Text = tower,
-		TextColor3 = Color3.new(0.61, 0.32, 0.32),
-		TextStrokeColor3 = Color3.new(0, 0, 0),
-		TextStrokeTransparency = 0,
-		TextScaled = true,
-		ZIndex = 11,
-		RichText = false,
-	})))
-end
-return {
-	TooltipUI = TooltipUI,
-}
-]]></string>
-            </Properties>
-          </Item>
-        </Item>
-      </Item>
     </Item>
   </Item>
 </roblox>

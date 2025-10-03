@@ -2,6 +2,8 @@ import { EnemyConfig, EnemyInfo, EnemyName } from "shared/config/EnemyConfig"
 import { ReplicatedStorage } from "@rbxts/services"
 import Signal from "@rbxts/lemon-signal"
 import { Events } from "server/networking"
+import { Dependency } from "@flamework/core"
+import { EnemyService } from "server/services/EnemyService"
 
 const enemyFolder = ReplicatedStorage.Assets.Enemies
 
@@ -28,7 +30,8 @@ export class Enemy_S {
 	public setHealth(value: number) {
 		this.health = value
 		if (this.health <= 0) {
-			this.kill()
+			const enemyService = Dependency<EnemyService>()
+			enemyService.killEnemy(this.id)
 		} else {
 			Events.updateEnemyHealth.broadcast(this.id, value)
 		}

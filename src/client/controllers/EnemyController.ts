@@ -28,8 +28,6 @@ export class EnemyController implements OnStart {
 	}
 
 	private onEnemyHealthUpdated(id: number, value: number) {
-		print(this.enemies, id)
-
 		this.enemies.get(id)!.health = value
 	}
 }

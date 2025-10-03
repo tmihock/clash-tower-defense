@@ -21,7 +21,7 @@ export const TowerConfig = {
 		id: 1,
 		damage: 1,
 		attackRate: 1,
-		range: 5,
+		range: 8,
 		price: 100
 	},
 	Archer: {
@@ -30,6 +30,20 @@ export const TowerConfig = {
 		attackRate: 0.5,
 		range: 16,
 		price: 150
+	},
+	Cannon: {
+		id: 4,
+		damage: 2,
+		attackRate: 0.8,
+		range: 14,
+		price: 250
+	},
+	Sharpshooter: {
+		id: 5,
+		damage: 3,
+		attackRate: 1.5,
+		range: 100,
+		price: 350
 	}
 } satisfies Record<string, TowerInfo>
 

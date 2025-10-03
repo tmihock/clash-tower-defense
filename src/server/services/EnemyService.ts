@@ -5,6 +5,7 @@ import { Enemy_S } from "server/classes/Enemy_S"
 import { TrackService } from "./TrackService"
 import { Events } from "server/networking"
 import { GameService } from "./GameService"
+import Signal from "@rbxts/lemon-signal"
 
 const enemyFolder = ReplicatedStorage.Assets.Enemies
 
@@ -15,21 +16,18 @@ function nextId(): number {
 
 @Service({})
 export class EnemyService implements OnStart {
+	// Alive Enemies
 	private enemies = new Map<number, Enemy_S>()
 	private travelConnections = new Map<Enemy_S, RBXScriptConnection>()
+
+	public allEnemiesDied = new Signal()
 
 	constructor(
 		private trackService: TrackService,
 		private gameService: GameService
 	) {}
 
-	onStart() {
-		task.wait(3)
-		for (const i of $range(1, 100)) {
-			task.wait(0.5)
-			this.createEnemy("Skeleton")
-		}
-	}
+	onStart() {}
 
 	public createEnemy(enemyName: EnemyName): Enemy_S {
 		const id = nextId()
@@ -83,6 +81,9 @@ export class EnemyService implements OnStart {
 		const enemy = this.enemies.get(id)!
 		this.enemies.delete(id)
 		enemy.destroying.Fire()
+		if (this.enemies.size() === 0) {
+			this.allEnemiesDied.Fire()
+		}
 	}
 
 	public setEnemyHealth(id: number, value: number) {

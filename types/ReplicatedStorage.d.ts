@@ -45,6 +45,42 @@ interface ReplicatedStorage extends Instance {
 				};
 				hitbox: Part;
 			};
+			Cannon: Model & {
+				Model: Model;
+				hitbox: Part;
+			};
+			Sharpshooter: Model & {
+				Model: Model & {
+					SniperRifle: MeshPart;
+					["Right Leg"]: MeshPart;
+					Head: Part & {
+						Mesh: SpecialMesh;
+						face: Decal;
+					};
+					Torso: MeshPart & {
+						["Left Shoulder"]: Motor6D;
+						["Right Shoulder"]: Motor6D;
+						Neck: Motor6D;
+						["Right Hip"]: Motor6D;
+						["Left Hip"]: Motor6D;
+					};
+					HumanoidRootPart: Part & {
+						RootJoint: Motor6D;
+					};
+					["Right Arm"]: MeshPart & {
+						SniperRifle: Motor6D;
+					};
+					["Left Arm"]: MeshPart;
+					Sleeve2: MeshPart & {
+						WeldConstraint: WeldConstraint;
+					};
+					Sleeve1: MeshPart & {
+						WeldConstraint: WeldConstraint;
+					};
+					["Left Leg"]: MeshPart;
+				};
+				hitbox: Part;
+			};
 			None: Model & {
 				hitbox: Part;
 			};
@@ -56,15 +92,21 @@ interface ReplicatedStorage extends Instance {
 			};
 		};
 		Enemies: Folder & {
+			Armored_Skeleton: Model & {
+				Part: Part & {
+					["Korblox Body"]: Decal;
+				};
+				hitbox: Part;
+			};
 			Skeleton: Model & {
 				Part: Part & {
 					["Skeleton Meme"]: Decal;
 				};
 				hitbox: Part;
 			};
-			Armored_Skeleton: Model & {
+			Goblin: Model & {
 				Part: Part & {
-					["Korblox Body"]: Decal;
+					broly: Decal;
 				};
 				hitbox: Part;
 			};

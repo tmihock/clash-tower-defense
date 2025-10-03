@@ -1,14 +1,16 @@
 import { Service, OnStart } from "@flamework/core"
 import { atom } from "@rbxts/charm"
-import { Waves } from "shared/config/Waves"
+import { Waves } from "shared/config/Rounds"
 import { OnPlayerAdded, OnPlayerRemoving } from "./PlayerService"
 import { Events } from "server/networking"
 import { MAX_HEALTH } from "shared/constants"
+import { $print } from "rbxts-transform-debug"
 
 @Service({})
 export class GameService implements OnStart, OnPlayerAdded, OnPlayerRemoving {
-	private currentWave = 0
 	private health = atom(MAX_HEALTH)
+
+	constructor() {}
 
 	onStart() {}
 
@@ -17,17 +19,6 @@ export class GameService implements OnStart, OnPlayerAdded, OnPlayerRemoving {
 	}
 
 	onPlayerRemoving(player: Player): void {}
-
-	public nextWave() {
-		this.currentWave++
-
-		const currentWave = Waves[this.currentWave]
-		// Play waves
-	}
-
-	public getCurrentWave(): number {
-		return this.currentWave
-	}
 
 	public takeDamage(amount: number) {
 		// Play effect
