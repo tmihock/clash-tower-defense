@@ -13,13 +13,14 @@ import { $assert } from "rbxts-transform-debug"
 import { TowerConfig, TowerName } from "shared/config/TowerConfig"
 import { EnemyController } from "./EnemyController"
 import { TargetMode } from "shared/networking"
-import { atom } from "@rbxts/charm"
+import { Atom, atom } from "@rbxts/charm"
 import { createRoot } from "@rbxts/react-roblox"
 import React from "@rbxts/react"
 import { TAG_TOWER } from "shared/constants"
 import { findFirstAncestorWithTag } from "shared/util/findFirstAncestorWithTag"
 import { TooltipUI } from "client/ui/Tooltip"
 import { TrackController } from "./TrackController"
+import { ClientStateProvider } from "./ClientStateProvider"
 
 const player = Players.LocalPlayer
 const playerGui = player.WaitForChild("PlayerGui") as PlayerGui
@@ -31,7 +32,7 @@ export class TowerController implements OnStart {
 	private isPlacing = false
 	private previewModel?: PVInstance
 	private mouseStepped?: RBXScriptConnection
-	public selectedTower = atom<TowerName>("None")
+	public selectedTower: Atom<TowerName>
 
 	private towers = new Map<number, Tower_C>()
 	private tooltipsEnabled = true
@@ -39,8 +40,11 @@ export class TowerController implements OnStart {
 
 	constructor(
 		private enemyController: EnemyController,
-		private trackController: TrackController
-	) {}
+		private trackController: TrackController,
+		private stateProvider: ClientStateProvider
+	) {
+		this.selectedTower = this.stateProvider.selectedTower
+	}
 
 	onStart() {
 		this.rangePreview.Anchored = true
@@ -252,15 +256,21 @@ export class TowerController implements OnStart {
 		$assert(placementPos, `this.mouseToTowerPos(${this.selectedTower}) returned undefined`)
 
 		const clone = this.previewModel?.Clone()
+		if (this.canBuy(selectedTower)) {
+			Functions.placeTower.invoke(placementPos, selectedTower).then(wasPlaced => {
+				if (wasPlaced) {
+					clone?.Destroy()
+				} else {
+					// Failed, make clone red then destroy or seomthing
+					clone?.Destroy()
+				}
+			})
+		}
+	}
 
-		Functions.placeTower.invoke(placementPos, selectedTower).then(wasPlaced => {
-			if (wasPlaced) {
-				clone?.Destroy()
-			} else {
-				// Failed, make clone red then destroy or seomthing
-				clone?.Destroy()
-			}
-		})
+	private canBuy(tower: TowerName): boolean {
+		const { unlockedInventory, exp: money } = this.stateProvider
+		return unlockedInventory().has(tower) && money() >= TowerConfig[tower].price
 	}
 
 	private mouseToTowerPos(tower: TowerName): Vector3 | undefined {

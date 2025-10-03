@@ -10,6 +10,7 @@ import React from "@rbxts/react"
 import { TowerController } from "./TowerController"
 import { Inventory } from "client/ui/Inventory"
 import { Atom, atom } from "@rbxts/charm"
+import { ClientStateProvider } from "./ClientStateProvider"
 
 const player = Players.LocalPlayer
 const playerGui = player.WaitForChild("PlayerGui") as PlayerGui
@@ -33,7 +34,12 @@ export class InventoryController implements OnStart {
 	// Doesn't properly render inital bar, all start as empty
 	private equipBar = atom(["None", "None", "None", "None"]) as Atom<EquipBar>
 
-	constructor(private towerController: TowerController) {}
+	constructor(
+		private towerController: TowerController,
+		private stateProvider: ClientStateProvider
+	) {
+		this.unlockedInventoryAtom = stateProvider.unlockedInventory
+	}
 
 	onStart() {
 		Events.setUnlockedInventory.connect(inventory => {
@@ -72,7 +78,6 @@ export class InventoryController implements OnStart {
 	}
 
 	private onEquipSlotClicked(index: number, tower: TowerName) {
-		print(tower)
 		this.towerController.togglePlacingTower(tower)
 	}
 
@@ -91,7 +96,7 @@ export class InventoryController implements OnStart {
 				visibleAtom={this.inventoryOpenAtom}
 				inventoryAtom={this.unlockedInventoryAtom}
 				equipBarProps={{
-					selectedAtom: this.towerController.selectedTower,
+					selectedAtom: this.stateProvider.selectedTower,
 					initial: this.getEquipBar(),
 					onClick: (i, t) => this.onEquipSlotClicked(i, t)
 				}}

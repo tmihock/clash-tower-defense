@@ -26,7 +26,11 @@ interface ServerEvents {
 // Server -> Client events
 interface ClientEvents {
 	// Game
-	healthChanged(value: number): void
+	healthChanged(newValue: number): void
+
+	// Money & Exp
+	moneyChanged(newValue: number, oldValue: number): void
+	expChanged(newValue: number, oldValue: number): void
 
 	// Enemies
 	enemySpawned(id: number, enemy: EnemyName): void

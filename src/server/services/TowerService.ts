@@ -1,11 +1,12 @@
 import { Service, OnStart } from "@flamework/core"
-import { TowerName } from "shared/config/TowerConfig"
+import { TowerConfig, TowerName } from "shared/config/TowerConfig"
 import { ReplicatedStorage, Workspace } from "@rbxts/services"
 import { InventoryService } from "./InventoryService"
 import { TrackService } from "./TrackService"
 import { Tower_S } from "server/classes/Tower_S"
 import { EnemyService } from "./EnemyService"
 import { Events, Functions } from "server/networking"
+import { MoneyService } from "./MoneyService"
 
 const towerFolder = ReplicatedStorage.Assets.Towers
 
@@ -21,15 +22,17 @@ export class TowerService implements OnStart {
 	constructor(
 		private inventoryService: InventoryService,
 		private trackService: TrackService,
-		private enemyService: EnemyService
+		private enemyService: EnemyService,
+		private moneyService: MoneyService
 	) {}
 
 	onStart() {
-		Functions.placeTower.setCallback((p, po, t) => this.onPlaceTower(p, po, t))
+		Functions.placeTower.setCallback((p, po, t) => this.onPlaceTowerRequest(p, po, t))
 	}
 
-	private onPlaceTower(player: Player, pos: Vector3, tower: TowerName): boolean {
+	private onPlaceTowerRequest(player: Player, pos: Vector3, tower: TowerName): boolean {
 		if (this.canPlace(player, pos, tower)) {
+			this.moneyService.removeMoney(player, TowerConfig[tower].price)
 			this.spawnTower(pos, tower)
 			return true
 		} else {

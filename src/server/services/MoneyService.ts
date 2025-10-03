@@ -3,6 +3,7 @@ import { DataIO, SaveableDataObject } from "./DataService"
 import { t } from "@rbxts/t"
 import { $terrify } from "rbxts-transformer-t-new"
 import { MONEY_LEADERSTAT_NAME } from "shared/constants"
+import { Events } from "server/networking"
 
 const SAVE_KEY = "coins"
 
@@ -22,7 +23,9 @@ export class MoneyService implements DataIO {
 			const leaderstatValue = this.leaderstatsInstances
 				.get(player)!
 				.FindFirstChild(leaderstat) as NumberValue
-			leaderstatValue!.Value = value
+			const oldValue = leaderstatValue.Value
+			leaderstatValue.Value = value
+			Events.moneyChanged.fire(player, value, oldValue)
 			resolve()
 		})
 	}

@@ -1,5 +1,6 @@
 export interface TowerInfo {
 	id: number
+	expReq: number
 
 	damage: number
 	attackRate: number // attacks per second
@@ -12,6 +13,7 @@ export const TowerConfig = {
 	// Used in equip bar
 	None: {
 		id: -1,
+		expReq: -1,
 		damage: -1,
 		attackRate: 100,
 		range: 0,
@@ -19,6 +21,7 @@ export const TowerConfig = {
 	},
 	Barbarian: {
 		id: 1,
+		expReq: 0,
 		damage: 1,
 		attackRate: 1,
 		range: 8,
@@ -26,6 +29,7 @@ export const TowerConfig = {
 	},
 	Archer: {
 		id: 2,
+		expReq: 100,
 		damage: 1,
 		attackRate: 0.5,
 		range: 16,
@@ -33,6 +37,7 @@ export const TowerConfig = {
 	},
 	Cannon: {
 		id: 4,
+		expReq: 200,
 		damage: 2,
 		attackRate: 0.8,
 		range: 14,
@@ -40,6 +45,7 @@ export const TowerConfig = {
 	},
 	Sharpshooter: {
 		id: 5,
+		expReq: 400,
 		damage: 3,
 		attackRate: 1.5,
 		range: 100,
