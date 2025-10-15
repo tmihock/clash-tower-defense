@@ -1,5 +1,5 @@
-import { Service, OnStart, OnInit, Flamework, Reflect, Modding } from "@flamework/core"
-import Charm, { atom, Atom, subscribe } from "@rbxts/charm"
+import { Service, OnInit, Modding } from "@flamework/core"
+import { atom, Atom, subscribe } from "@rbxts/charm"
 import Maid from "@rbxts/maid"
 import { DataStoreService, Players } from "@rbxts/services"
 import { $print } from "rbxts-transform-debug"
@@ -38,14 +38,23 @@ const tPlayerState = $terrify<PlayerState>()
 @Service({
 	loadOrder: 0
 })
-export class PlayerStateProvider implements OnInit, OnStart {
-	public playerState = new Map<Player, AtomsFrom<PlayerState>>()
-	private syncSubscriptions = new Map<Player, Array<() => void>>()
+export class PlayerStateProvider implements OnInit {
+	public readonly playerState = new Map<Player, AtomsFrom<PlayerState>>()
 
 	private atomMaids = new Map<Atom<any>, Maid>()
 
-	public get(player: Player): AtomsFrom<PlayerState> {
-		return this.playerState.get(player)!
+	public get(player: Player): AtomsFrom<PlayerState>
+	public get<K extends keyof PlayerState>(player: Player, key: K): AtomsFrom<PlayerState>
+	public get<K extends keyof PlayerState>(
+		player: Player,
+		key?: K
+	): AtomsFrom<PlayerState> | AtomsFrom<PlayerState>[K] {
+		const playerState = this.playerState.get(player)!
+		if (key !== undefined) {
+			return playerState[key]
+		} else {
+			return playerState
+		}
 	}
 
 	// Fix bullshit unknown spam later
@@ -83,16 +92,6 @@ export class PlayerStateProvider implements OnInit, OnStart {
 		maid.GiveTask(subscribe(atom, listener))
 	}
 
-	onStart() {}
-
-	onInit() {
-		Players.GetPlayers().forEach(p => this.loadData(p))
-		Players.PlayerAdded.Connect(p => this.loadData(p))
-
-		game.BindToClose(() => Players.GetPlayers().forEach(p => this.saveData(p)))
-		Players.PlayerRemoving.Connect(p => this.saveData(p))
-	}
-
 	private loadData(player: Player): void {
 		new Promise<Partial<PlayerState>>((resolve, reject) => {
 			let data: unknown
@@ -112,19 +111,17 @@ export class PlayerStateProvider implements OnInit, OnStart {
 			}
 		})
 			.then(data => {
-				this.syncSubscriptions.set(player, [])
 				const atomData = {} as Record<string, Atom<defined>>
 
 				for (const [key, defaultValue] of pairs(DEFAULT_PLAYER_STATE)) {
 					const value = (data as Record<string, defined>)[key] ?? defaultValue
 					atomData[key] = atom(value)
 
+					// Update client
 					if (key in SYNC_KEYS) {
-						this.syncSubscriptions.get(player)!.push(
-							subscribe(atomData[key], (newValue, oldValue) => {
-								Events.playerStateChanged.fire(player, key, newValue, oldValue)
-							})
-						)
+						this.subscribe(atomData[key], (newValue, oldValue) => {
+							Events.playerStateChanged.fire(player, key, newValue, oldValue)
+						})
 					}
 				}
 
@@ -153,5 +150,13 @@ export class PlayerStateProvider implements OnInit, OnStart {
 			.finally(() => {
 				this.playerState.delete(player)
 			})
+	}
+
+	onInit() {
+		Players.GetPlayers().forEach(p => this.loadData(p))
+		Players.PlayerAdded.Connect(p => this.loadData(p))
+
+		game.BindToClose(() => Players.GetPlayers().forEach(p => this.saveData(p)))
+		Players.PlayerRemoving.Connect(p => this.saveData(p))
 	}
 }

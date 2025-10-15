@@ -1,13 +1,7 @@
-import { Service, OnStart } from "@flamework/core"
-import { atom, subscribe } from "@rbxts/charm"
-import { Events } from "server/networking"
-import { OnPlayerAdded } from "./PlayerService"
-
-const SAVE_KEY = "playerState"
+import { Service } from "@flamework/core"
+import { atom } from "@rbxts/charm"
 
 @Service({})
-export class ServerStateProvider implements OnStart {
-	onStart() {
-		// Remotes
-	}
+export class ServerStateProvider {
+	public readonly e = atom(2)
 }
