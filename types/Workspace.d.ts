@@ -1,6 +1,8 @@
 interface Workspace extends Model {
 	Enemies: Folder
 	Map: Folder & {
+		spawnPosition: PVInstance
+
 		Baseplate: Part
 		Rig: Model & {
 			LeftLowerArm: MeshPart & {

@@ -1,9 +1,12 @@
-import { Service } from "@flamework/core"
-import { DataIO, SaveableDataObject } from "./DataService"
+import { OnStart, Service } from "@flamework/core"
 import { t } from "@rbxts/t"
 import { $terrify } from "rbxts-transformer-t-new"
 import { MONEY_LEADERSTAT_NAME } from "shared/constants"
 import { Events } from "server/networking"
+import { PlayerStateProvider } from "./PlayerStateProvider"
+import { OnPlayerAdded } from "./PlayerService"
+import { subscribe } from "@rbxts/charm"
+import Maid from "@rbxts/maid"
 
 const SAVE_KEY = "coins"
 
@@ -12,49 +15,13 @@ const tHasMoney = $terrify<{
 }>()
 
 @Service({})
-export class MoneyService implements DataIO {
+export class MoneyService implements OnPlayerAdded {
 	private playersMoneyInstances = new Map<Player, NumberValue>()
 	private leaderstatsInstances = new Map<Player, Folder>()
 
-	public setLeaderstat(player: Player, leaderstat: string, value: number) {
-		return new Promise<void>(resolve => {
-			while (!this.leaderstatsInstances.has(player)) task.wait() // Load order
+	constructor(private playerStateProvider: PlayerStateProvider) {}
 
-			const leaderstatValue = this.leaderstatsInstances
-				.get(player)!
-				.FindFirstChild(leaderstat) as NumberValue
-			const oldValue = leaderstatValue.Value
-			leaderstatValue.Value = value
-			Events.moneyChanged.fire(player, value, oldValue)
-			resolve()
-		})
-	}
-
-	public setMoney(player: Player, amount: number) {
-		const moneyInstance = this.playersMoneyInstances.get(player)
-		assert(moneyInstance, `Leaderstats not loaded`)
-		moneyInstance.Value = math.floor(amount)
-	}
-
-	public addMoney(player: Player, amount: number) {
-		this.setMoney(player, this.getMoney(player) + amount)
-	}
-
-	public removeMoney(player: Player, amount: number) {
-		this.setMoney(player, this.getMoney(player) - amount)
-	}
-
-	public getMoney(player: Player): number {
-		const money = this.playersMoneyInstances.get(player)
-		assert(money, `Money not loaded for player ${player.Name}`)
-		return money.Value
-	}
-
-	public getMoneyChangedSignal(player: Player): RBXScriptSignal {
-		return this.playersMoneyInstances.get(player)!.GetPropertyChangedSignal("Value")
-	}
-
-	onDataLoad(player: Player, data: Record<string, unknown>): void {
+	onPlayerAdded(player: Player) {
 		const leaderstats = new Instance("Folder")
 		leaderstats.Name = "leaderstats"
 		leaderstats.Parent = player
@@ -66,20 +33,8 @@ export class MoneyService implements DataIO {
 		this.playersMoneyInstances.set(player, moneyInstance)
 		this.leaderstatsInstances.set(player, leaderstats)
 
-		if (tHasMoney(data)) {
-			this.setMoney(player, data[SAVE_KEY])
-		} else {
-			this.setMoney(player, 0)
-		}
-	}
-
-	onDataSave(player: Player): SaveableDataObject<number> {
-		const playerMoney = this.getMoney(player)
-		this.playersMoneyInstances.delete(player)
-		this.leaderstatsInstances.delete(player)
-		return {
-			key: SAVE_KEY,
-			value: playerMoney
-		}
+		this.playerStateProvider.subscribe(player, "money", newValue => {
+			this.playersMoneyInstances.get(player)!.Value = newValue
+		})
 	}
 }

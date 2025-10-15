@@ -1,64 +1,15 @@
 import { Networking } from "@flamework/networking"
-import { TowerName } from "./config/TowerConfig"
-import { EnemyName } from "./config/EnemyConfig"
-
-export interface EnemySyncInfo {
-	id: number
-	elapsed: number
-	pos: Vector3
-}
-
-export type TargetMode = "First" | "Last" | "Closest"
-export interface TowerSyncInfo {
-	id: number
-	damageDealt: number
-}
-
-export type EquipBar = TowerName[]
 
 // Client -> Server events
-interface ServerEvents {
-	// Inventory / Equip
-	setEquipBar(equipBar: EquipBar): void
-	updateEquipBar(index: number, value: TowerName): void
-}
+interface ServerEvents {}
 
 // Server -> Client events
 interface ClientEvents {
-	// Game
-	healthChanged(newValue: number): void
-
-	// Money & Exp
-	moneyChanged(newValue: number, oldValue: number): void
-	expChanged(newValue: number, oldValue: number): void
-
-	// Enemies
-	enemySpawned(id: number, enemy: EnemyName): void
-	enemyDeleted(id: number): void
-	updateEnemyHealth(id: number, value: number): void
-	syncEnemies(info: EnemySyncInfo[]): void
-
-	// Towers
-	towerPlaced(id: number, pos: Vector3, tower: TowerName): void
-	towerDeleted(id: number): void
-	setTowerTargetMode(id: number, targetMode: TargetMode): void
-	towerAttackedEnemy(towerId: number, enemyId: number): void
-	syncTowers(info: TowerSyncInfo[]): void
-
-	// Equip
-	setEquipBar(equipBar: EquipBar): void
-	updateEquipBar(index: number, value: TowerName): void
-
-	// Inventory
-	setUnlockedInventory(inventory: TowerName[]): void
-	addToUnlockedInventory(tower: TowerName): void
-	removeFromUnlockedInventory(tower: TowerName): void
+	playerStateChanged(key: string, newValue: unknown, oldValue: unknown): void
 }
 
 // Client -> Server -> Client functions
-interface ServerFunctions {
-	placeTower(pos: Vector3, tower: TowerName): boolean
-}
+interface ServerFunctions {}
 
 // Server -> Client -> Server functions
 // Unsafe
