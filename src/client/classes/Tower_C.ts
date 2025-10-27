@@ -7,6 +7,9 @@ import Maid from "@rbxts/maid"
 
 const towerFolder = ReplicatedStorage.Assets.Towers
 
+export const ATTR_OWNER = "owner"
+export const ATTR_ID = "id"
+
 export class Tower_C {
 	public instance: PVInstance
 	public info: TowerInfo
@@ -19,7 +22,8 @@ export class Tower_C {
 		public id: number,
 		public position: Vector3,
 		tower: TowerName,
-		private enemyController: EnemyController
+		private enemyController: EnemyController,
+		public owner: Player
 	) {
 		this.info = TowerConfig[tower]
 
@@ -28,7 +32,8 @@ export class Tower_C {
 		towerInstance.Parent = Workspace.Towers
 
 		this.instance = towerInstance
-
+		this.instance.SetAttribute(ATTR_ID, id)
+		this.instance.SetAttribute(ATTR_OWNER, owner.Name)
 		this.maid.GiveTask(RunService.RenderStepped.Connect(() => this.faceTargetEnemy()))
 	}
 

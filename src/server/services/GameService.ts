@@ -1,18 +1,36 @@
 import { Service, OnStart } from "@flamework/core"
-import { atom } from "@rbxts/charm"
-import { Waves } from "shared/config/Rounds"
+import { Atom, atom, subscribe } from "@rbxts/charm"
 import { OnPlayerAdded, OnPlayerRemoving } from "./PlayerService"
-import { Events } from "server/networking"
-import { MAX_HEALTH } from "shared/constants"
-import { $print } from "rbxts-transform-debug"
+import { Events, Functions } from "server/networking"
+import { ServerStateProvider } from "./ServerStateProvider"
+import { RoundService } from "./RoundService"
 
 @Service({})
 export class GameService implements OnStart, OnPlayerAdded, OnPlayerRemoving {
-	private health = atom(MAX_HEALTH)
+	private health: Atom<number>
+	private gameStarted: Atom<boolean>
 
-	constructor() {}
+	constructor(
+		private stateProvider: ServerStateProvider,
+		private roundSerivice: RoundService
+	) {
+		this.health = this.stateProvider.health
+		this.gameStarted = this.stateProvider.gameStarted
+	}
 
-	onStart() {}
+	onStart() {
+		Functions.requestStartGame.setCallback(p => this.onStartGameRequest(p))
+	}
+
+	// Returns true if game was started
+	private onStartGameRequest(player: Player): boolean {
+		if (!this.gameStarted()) {
+			this.startGame()
+			return true
+		} else {
+			return false
+		}
+	}
 
 	onPlayerAdded(player: Player): void {
 		Events.healthChanged.fire(player, this.health())
@@ -20,12 +38,11 @@ export class GameService implements OnStart, OnPlayerAdded, OnPlayerRemoving {
 
 	onPlayerRemoving(player: Player): void {}
 
-	public takeDamage(amount: number) {
-		// Play effect
-		this.health(old => old - amount)
-	}
+	public startGame() {
+		assert(!this.gameStarted, "Game has already started")
 
-	public getHealth(): number {
-		return this.health()
+		task.spawn(() => {
+			this.roundSerivice.play()
+		})
 	}
 }

@@ -25,12 +25,11 @@ interface ServerEvents {
 
 // Server -> Client events
 interface ClientEvents {
+	// Player State
+	playerStateChanged(key: string, newValue: unknown, oldValue: unknown): void
+
 	// Game
 	healthChanged(newValue: number): void
-
-	// Money & Exp
-	moneyChanged(newValue: number, oldValue: number): void
-	expChanged(newValue: number, oldValue: number): void
 
 	// Enemies
 	enemySpawned(id: number, enemy: EnemyName): void
@@ -39,7 +38,7 @@ interface ClientEvents {
 	syncEnemies(info: EnemySyncInfo[]): void
 
 	// Towers
-	towerPlaced(id: number, pos: Vector3, tower: TowerName): void
+	towerPlaced(id: number, pos: Vector3, tower: TowerName, owner: Player): void
 	towerDeleted(id: number): void
 	setTowerTargetMode(id: number, targetMode: TargetMode): void
 	towerAttackedEnemy(towerId: number, enemyId: number): void
@@ -57,7 +56,8 @@ interface ClientEvents {
 
 // Client -> Server -> Client functions
 interface ServerFunctions {
-	placeTower(pos: Vector3, tower: TowerName): boolean
+	requestPlaceTower(pos: Vector3, tower: TowerName): boolean
+	requestStartGame(): boolean
 }
 
 // Server -> Client -> Server functions

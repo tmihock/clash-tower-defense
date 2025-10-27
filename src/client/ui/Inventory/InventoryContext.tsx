@@ -6,7 +6,7 @@ import { EquipBar } from "shared/networking"
 
 interface InventoryContextValue {
 	inventoryOpen: Atom<boolean>
-	unlockedItems: Set<TowerName>
+	unlockedItems: TowerName[]
 	equipped: TowerName[]
 	selectTower: (tower: TowerName) => void
 	selectedTower: TowerName
@@ -27,7 +27,7 @@ export function InventoryProvider({
 }: {
 	children: React.ReactNode
 	value: {
-		unlocked: Atom<Set<TowerName>>
+		unlocked: Atom<TowerName[]>
 		inventoryOpen: Atom<boolean>
 		equipBarAtom: Atom<EquipBar>
 	}

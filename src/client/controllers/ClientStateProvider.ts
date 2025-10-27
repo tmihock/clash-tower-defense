@@ -1,17 +1,36 @@
-import { Controller, OnStart } from "@flamework/core"
-import { atom } from "@rbxts/charm"
+import { Controller, Modding, OnInit, OnStart } from "@flamework/core"
+import { Atom, atom } from "@rbxts/charm"
+import { Events } from "client/networking"
+import { $terrify } from "rbxts-transformer-t-new"
+import type { PlayerState, SyncKeys } from "server/services/PlayerStateProvider"
 import { TowerName } from "shared/config/TowerConfig"
 
-/**
- * Used to stop circular dependencies when controllers only need to access eachothers state
- * ONLY stores state, doesn't edit it
- * Controllers should import eachother directly if possible
- */
+const SYNC_KEYS = Modding.inspect<SyncKeys[]>()
+
+const tSyncKey = $terrify<SyncKeys>()
 
 @Controller({})
-export class ClientStateProvider {
-	public readonly selectedTower = atom<TowerName>("None")
-	public readonly unlockedInventory = atom<Set<TowerName>>(new Set())
-	public readonly money = atom(0)
-	public readonly exp = atom(0)
+export class ClientStateProvider implements OnInit {
+	public health = atom<number>(100)
+	public selectedTower = atom<TowerName>("None")
+
+	public playerState = {} as {
+		[K in SyncKeys]: Atom<PlayerState[K]>
+	}
+
+	constructor() {
+		for (const key of SYNC_KEYS) {
+			;(this.playerState as Record<string, Atom<unknown>>)[key] = atom<unknown>(undefined)
+		}
+	}
+
+	onInit() {
+		Events.playerStateChanged.connect((key, state, prev) => {
+			if (!tSyncKey(key)) return
+			;(this.playerState[key] as Atom<any>)(state)
+		})
+		Events.healthChanged.connect(newHealth => {
+			this.health(newHealth)
+		})
+	}
 }

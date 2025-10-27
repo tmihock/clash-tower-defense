@@ -7,7 +7,7 @@ import {
 	UserInputService,
 	Workspace
 } from "@rbxts/services"
-import { Tower_C } from "client/classes/Tower_C"
+import { ATTR_OWNER, Tower_C } from "client/classes/Tower_C"
 import { Events, Functions } from "client/networking"
 import { $assert } from "rbxts-transform-debug"
 import { TowerConfig, TowerName } from "shared/config/TowerConfig"
@@ -62,13 +62,12 @@ export class TowerController implements OnStart {
 			// 	this.togglePlacingTower()
 			// }
 
-			if (input.KeyCode)
-				if (input.UserInputType === Enum.UserInputType.MouseButton1 && this.isPlacing) {
-					this.confirmTowerPlacement()
-				}
+			if (input.UserInputType === Enum.UserInputType.MouseButton1 && this.isPlacing) {
+				this.confirmTowerPlacement()
+			}
 		})
 
-		Events.towerPlaced.connect((i, p, t) => this.onTowerPlaced(i, p, t))
+		Events.towerPlaced.connect((i, p, t, o) => this.onTowerPlaced(i, p, t, o))
 		Events.towerDeleted.connect(i => this.onTowerDeleted(i))
 		Events.towerAttackedEnemy.connect((t, e) => this.onTowerAttackedEnemy(t, e))
 		Events.setTowerTargetMode.connect((i, t) => this.onTowerTargetModeChanged(i, t))
@@ -80,11 +79,17 @@ export class TowerController implements OnStart {
 		const visible = atom(true)
 		const mousePos = atom(new Vector2(0, 0))
 		const hoveredTower = atom<TowerName>("None")
+		const towerOwnerAtom = atom<string>()
 
 		const root = createRoot(playerGui)
 
 		root.render(
-			<TooltipUI hoveredTower={hoveredTower} visibleAtom={visible} mousePosAtom={mousePos} />
+			<TooltipUI
+				hoveredTower={hoveredTower}
+				visibleAtom={visible}
+				mousePosAtom={mousePos}
+				ownerAtom={towerOwnerAtom}
+			/>
 		)
 
 		RunService.RenderStepped.Connect(dt => {
@@ -104,6 +109,7 @@ export class TowerController implements OnStart {
 				const tower = findFirstAncestorWithTag(rayResult.Instance, TAG_TOWER)
 				visible(true)
 				mousePos(new Vector2(X, Y))
+				towerOwnerAtom(tower?.GetAttribute(ATTR_OWNER) as string)
 				hoveredTower(tower ? (tower.Name as TowerName) : "None")
 			} else {
 				visible(false)
@@ -116,8 +122,8 @@ export class TowerController implements OnStart {
 		tower!.targetMode = mode
 	}
 
-	private onTowerPlaced(id: number, pos: Vector3, tower: TowerName) {
-		const newTower = new Tower_C(id, pos, tower, this.enemyController)
+	private onTowerPlaced(id: number, pos: Vector3, tower: TowerName, owner: Player) {
+		const newTower = new Tower_C(id, pos, tower, this.enemyController, owner)
 		this.towers.set(id, newTower)
 	}
 
@@ -257,7 +263,7 @@ export class TowerController implements OnStart {
 
 		const clone = this.previewModel?.Clone()
 		if (this.canBuy(selectedTower)) {
-			Functions.placeTower.invoke(placementPos, selectedTower).then(wasPlaced => {
+			Functions.requestPlaceTower.invoke(placementPos, selectedTower).then(wasPlaced => {
 				if (wasPlaced) {
 					clone?.Destroy()
 				} else {
@@ -269,8 +275,8 @@ export class TowerController implements OnStart {
 	}
 
 	private canBuy(tower: TowerName): boolean {
-		const { unlockedInventory, exp: money } = this.stateProvider
-		return unlockedInventory().has(tower) && money() >= TowerConfig[tower].price
+		const { unlockedTowers, money } = this.stateProvider.playerState
+		return unlockedTowers().includes(tower) && money() >= TowerConfig[tower].price
 	}
 
 	private mouseToTowerPos(tower: TowerName): Vector3 | undefined {

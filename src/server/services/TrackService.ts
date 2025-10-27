@@ -40,20 +40,20 @@ export class TrackService implements OnStart {
 		return waypoints[waypoints.size() - 1]
 	}
 
+	public setTrack(track?: Track) {
+		this.track = track
+	}
+
 	public getWaypoints(): Vector3[] {
-		return this.getTrack().getWaypoints()
+		return this.getTrack()!.getWaypoints()
 	}
 
 	public getTrackLength(): number {
-		return this.getTrack().getTrackLength()
+		return this.getTrack()!.getTrackLength()
 	}
 
 	public getTrack(): Track {
-		if (this.track) return this.track
-		const tracks = Dependency<Components>().getAllComponents<Track>()
-
-		$assert(tracks.size() === 1, `${tracks.size()} track components exist. If amount is 0}`)
-		this.track = tracks[0]
-		return tracks[0]
+		assert(this.track, "No track is currently set")
+		return this.track
 	}
 }

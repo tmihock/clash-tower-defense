@@ -2,20 +2,23 @@ import React, { useEffect, useState } from "@rbxts/react"
 import { useMotion } from "@rbxts/pretty-react-hooks"
 import { Events } from "client/networking"
 import { MAX_HEALTH } from "shared/constants"
+import { Atom } from "@rbxts/charm"
+import { useAtom } from "@rbxts/react-charm"
 
 interface Props {
-	initialHealth: number
+	healthAtom: Atom<number>
 }
 
-export function HealthBar({ initialHealth }: Props) {
-	const [health, setHealth] = useState(initialHealth)
+export function HealthBar({ healthAtom }: Props) {
+	const health = useAtom(healthAtom)
+	const [displayHealth, setDisplayHealth] = useState(health)
 
 	// Create animated motion for the fill scale
-	const [fillScale, fillScaleMotion] = useMotion(math.clamp(initialHealth / 100, 0.05, 1))
+	const [fillScale, fillScaleMotion] = useMotion(math.clamp(health / 100, 0.05, 1))
 
 	useEffect(() => {
 		const disconnect = Events.healthChanged.connect(value => {
-			setHealth(value)
+			setDisplayHealth(value)
 			// Animate to new fill scale over 1 second
 			const newFillScale = math.clamp(value / MAX_HEALTH, 0.05, 1)
 			fillScaleMotion.spring(newFillScale, {
@@ -25,10 +28,10 @@ export function HealthBar({ initialHealth }: Props) {
 		})
 
 		return () => disconnect.Disconnect()
-	}, [Events.healthChanged, fillScaleMotion])
+	}, [health])
 
 	return (
-		<screengui ResetOnSpawn={false} key="Hunger">
+		<screengui ResetOnSpawn={false} key="HealthBar">
 			<frame
 				Size={UDim2.fromOffset(20, 200)}
 				Position={UDim2.fromOffset(10, -30).add(UDim2.fromScale(0, 1))} // bottom left corner

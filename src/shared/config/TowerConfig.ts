@@ -29,7 +29,7 @@ export const TowerConfig = {
 	},
 	Archer: {
 		id: 2,
-		expReq: 100,
+		expReq: 10,
 		damage: 1,
 		attackRate: 0.5,
 		range: 16,
@@ -37,7 +37,7 @@ export const TowerConfig = {
 	},
 	Cannon: {
 		id: 4,
-		expReq: 200,
+		expReq: 50,
 		damage: 2,
 		attackRate: 0.8,
 		range: 14,
@@ -45,7 +45,7 @@ export const TowerConfig = {
 	},
 	Sharpshooter: {
 		id: 5,
-		expReq: 400,
+		expReq: 80,
 		damage: 3,
 		attackRate: 1.5,
 		range: 100,

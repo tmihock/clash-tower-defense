@@ -4,10 +4,8 @@ import { EnemyName } from "shared/config/EnemyConfig"
 import { Enemy_S } from "server/classes/Enemy_S"
 import { TrackService } from "./TrackService"
 import { Events } from "server/networking"
-import { GameService } from "./GameService"
 import Signal from "@rbxts/lemon-signal"
-
-const enemyFolder = ReplicatedStorage.Assets.Enemies
+import { ServerStateProvider } from "./ServerStateProvider"
 
 let currentId = 1
 function nextId(): number {
@@ -24,7 +22,7 @@ export class EnemyService implements OnStart {
 
 	constructor(
 		private trackService: TrackService,
-		private gameService: GameService
+		private stateProvider: ServerStateProvider
 	) {}
 
 	onStart() {}
@@ -68,7 +66,7 @@ export class EnemyService implements OnStart {
 		const distanceTravelled = speed * elapsed
 		if (distanceTravelled >= this.trackService.getTrackLength()) {
 			const damage = enemy.info.damage
-			this.gameService.takeDamage(damage)
+			this.stateProvider.health(old => old - damage)
 			this.killEnemy(enemy.id)
 		}
 	}

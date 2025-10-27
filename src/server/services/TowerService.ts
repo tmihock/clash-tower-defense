@@ -7,6 +7,7 @@ import { Tower_S } from "server/classes/Tower_S"
 import { EnemyService } from "./EnemyService"
 import { Events, Functions } from "server/networking"
 import { MoneyService } from "./MoneyService"
+import { PlayerStateProvider } from "./PlayerStateProvider"
 
 const towerFolder = ReplicatedStorage.Assets.Towers
 
@@ -20,20 +21,21 @@ export class TowerService implements OnStart {
 	private towers = new Map<number, Tower_S>()
 
 	constructor(
+		private playerStateProvider: PlayerStateProvider,
 		private inventoryService: InventoryService,
 		private trackService: TrackService,
-		private enemyService: EnemyService,
-		private moneyService: MoneyService
+		private enemyService: EnemyService
 	) {}
 
 	onStart() {
-		Functions.placeTower.setCallback((p, po, t) => this.onPlaceTowerRequest(p, po, t))
+		Functions.requestPlaceTower.setCallback((p, po, t) => this.onPlaceTowerRequest(p, po, t))
 	}
 
 	private onPlaceTowerRequest(player: Player, pos: Vector3, tower: TowerName): boolean {
 		if (this.canPlace(player, pos, tower)) {
-			this.moneyService.removeMoney(player, TowerConfig[tower].price)
-			this.spawnTower(pos, tower)
+			const towerPrice = TowerConfig[tower].price
+			this.playerStateProvider.get(player).money(old => old - towerPrice)
+			this.spawnTower(pos, tower, player)
 			return true
 		} else {
 			return false
@@ -111,11 +113,11 @@ export class TowerService implements OnStart {
 		Events.towerDeleted.broadcast(id)
 	}
 
-	public spawnTower(pos: Vector3, tower: TowerName) {
+	public spawnTower(pos: Vector3, tower: TowerName, owner: Player) {
 		const id = nextId()
-		const newTower = new Tower_S(tower, id, pos, this.enemyService)
+		const newTower = new Tower_S(tower, id, pos, this.enemyService, owner)
 
-		Events.towerPlaced.broadcast(id, pos, tower)
+		Events.towerPlaced.broadcast(id, pos, tower, owner)
 
 		this.towers.set(id, newTower)
 	}

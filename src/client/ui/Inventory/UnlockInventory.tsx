@@ -13,7 +13,7 @@ for (const [towerName, info] of pairs(TowerConfig)) {
 print(ALL_TOWERS)
 
 export interface Props {
-	inventoryAtom: Atom<Set<TowerName>>
+	inventoryAtom: Atom<TowerName[]>
 }
 
 export function UnlockInventory({ inventoryAtom }: Props) {
@@ -48,7 +48,7 @@ export function UnlockInventory({ inventoryAtom }: Props) {
 			/>
 
 			{ALL_TOWERS.map((tower, index) => (
-				<InventoryItem key={`${index}`} tower={tower} unlocked={inventory.has(tower)} />
+				<InventoryItem key={`${index}`} tower={tower} unlocked={inventory.includes(tower)} />
 			))}
 		</scrollingframe>
 	)

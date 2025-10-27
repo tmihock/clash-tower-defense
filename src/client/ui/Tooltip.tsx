@@ -5,14 +5,16 @@ import { TowerName } from "shared/config/TowerConfig"
 
 interface Props {
 	hoveredTower: Atom<TowerName>
+	ownerAtom: Atom<string | undefined>
 	visibleAtom: Atom<boolean>
 	mousePosAtom: Atom<Vector2>
 }
 
-export function TooltipUI({ hoveredTower, visibleAtom, mousePosAtom }: Props) {
+export function TooltipUI({ hoveredTower, visibleAtom, mousePosAtom, ownerAtom }: Props) {
 	const visible = useAtom(visibleAtom)
 	const tower = useAtom(hoveredTower)
 	const { X, Y } = useAtom(mousePosAtom)
+	const owner = useAtom(ownerAtom)
 
 	return (
 		<screengui ResetOnSpawn={false} key="ToolTipGUI" IgnoreGuiInset={true} Enabled={visible}>
@@ -28,7 +30,7 @@ export function TooltipUI({ hoveredTower, visibleAtom, mousePosAtom }: Props) {
 					key="TooltipText"
 					Size={UDim2.fromScale(1, 1)}
 					BackgroundTransparency={1}
-					Text={tower}
+					Text={`${tower}\nOwned by: ${owner ?? "N/A"}`}
 					TextColor3={new Color3(0.61, 0.32, 0.32)}
 					TextStrokeColor3={new Color3(0, 0, 0)}
 					TextStrokeTransparency={0}

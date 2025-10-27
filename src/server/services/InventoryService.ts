@@ -1,39 +1,27 @@
 import { Service, OnStart } from "@flamework/core"
-import { DataIO, SaveableDataObject } from "./DataService"
 import { $terrify } from "rbxts-transformer-t-new"
 import { TowerConfig, TowerName } from "shared/config/TowerConfig"
 import { Events } from "server/networking"
-import { ExpService } from "./ExpService"
-
-export type Inventory = {
-	unlockedTowers: TowerName[]
-	// skins: SkinName[]
-}
-
-const SAVE_KEY = "inventory"
-
-const tHasInventory = $terrify<{
-	[SAVE_KEY]: Inventory
-}>()
-
-const defaultUnlocks = ["Barbarian"] satisfies TowerName[]
+import { PlayerStateProvider } from "./PlayerStateProvider"
+import { OnPlayerAdded } from "./PlayerService"
+import { computed, subscribe } from "@rbxts/charm"
 
 @Service({})
-export class InventoryService implements DataIO {
-	private playerUnlockedTowers = new Map<Player, Set<TowerName>>()
-
-	constructor(private expService: ExpService) {}
+export class InventoryService implements OnPlayerAdded {
+	constructor(private playerStateProvider: PlayerStateProvider) {}
 
 	public playerHasTower(player: Player, tower: TowerName): boolean {
-		return this.playerUnlockedTowers.get(player)!.has(tower)
+		return this.playerStateProvider.get(player).unlockedTowers().includes(tower)
 	}
 
 	public unlockTower(player: Player, tower: TowerName) {
-		this.playerUnlockedTowers.get(player)!.add(tower)
+		this.playerStateProvider.get(player).unlockedTowers(old => {
+			return [...old, tower]
+		})
 	}
 
 	public removeTower(player: Player, tower: TowerName) {
-		this.playerUnlockedTowers.get(player)!.delete(tower)
+		this.playerStateProvider.get(player).unlockedTowers(old => old.filter(t => t !== tower))
 	}
 
 	public onExpChanged(player: Player, newExp: number, oldExp: number) {
@@ -46,25 +34,9 @@ export class InventoryService implements DataIO {
 		}
 	}
 
-	onDataLoad(player: Player, data: Record<string, unknown>) {
-		if (tHasInventory(data)) {
-			this.playerUnlockedTowers.set(player, new Set(data[SAVE_KEY].unlockedTowers))
-		} else {
-			this.playerUnlockedTowers.set(player, new Set(table.clone(defaultUnlocks)))
-		}
-		Events.setUnlockedInventory.fire(player, [...this.playerUnlockedTowers.get(player)!])
-		this.expService.getExpChangedSignal(player).Connect((n, o) => this.onExpChanged(player, n, o))
-	}
-
-	onDataSave(player: Player): SaveableDataObject<Inventory> {
-		const inventory: Inventory = {
-			unlockedTowers: [...(this.playerUnlockedTowers.get(player) ?? new Set())]
-		}
-		this.playerUnlockedTowers.delete(player)
-
-		return {
-			key: SAVE_KEY,
-			value: inventory
-		}
+	onPlayerAdded(player: Player): void {
+		this.playerStateProvider.subscribe(player, "exp", (n, o) => {
+			this.onExpChanged(player, n, o)
+		})
 	}
 }

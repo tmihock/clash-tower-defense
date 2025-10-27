@@ -1,10 +1,7 @@
 import { Controller, OnInit, OnStart } from "@flamework/core"
-
 import { CollectionService } from "@rbxts/services"
 import { TAG_TRACK } from "shared/constants"
-
 import type { TrackInstance } from "server/components/Track"
-import { $print } from "rbxts-transform-debug"
 
 @Controller({})
 export class TrackController implements OnInit, OnStart {

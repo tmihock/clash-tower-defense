@@ -19,7 +19,8 @@ export class Tower_S {
 		towerName: TowerName,
 		public id: number,
 		public position: Vector3,
-		private enemyService: EnemyService
+		private enemyService: EnemyService,
+		public owner: Player
 	) {
 		this.info = TowerConfig[towerName]
 		this.startAttacking()

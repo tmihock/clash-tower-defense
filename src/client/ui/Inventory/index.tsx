@@ -8,7 +8,7 @@ import { InventoryProvider } from "./InventoryContext"
 
 export interface Props {
 	visibleAtom: Atom<boolean>
-	inventoryAtom: Atom<Set<TowerName>>
+	inventoryAtom: Atom<TowerName[]>
 
 	equipBarProps: EquipBarProps
 }
