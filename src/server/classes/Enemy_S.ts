@@ -1,11 +1,8 @@
 import { EnemyConfig, EnemyInfo, EnemyName } from "shared/config/EnemyConfig"
-import { ReplicatedStorage } from "@rbxts/services"
 import Signal from "@rbxts/lemon-signal"
 import { Events } from "server/networking"
 import { Dependency } from "@flamework/core"
 import { EnemyService } from "server/services/EnemyService"
-
-const enemyFolder = ReplicatedStorage.Assets.Enemies
 
 export class Enemy_S {
 	private health: number
@@ -39,10 +36,5 @@ export class Enemy_S {
 
 	public getHealth(): number {
 		return this.health
-	}
-
-	public kill() {
-		this.health = 0
-		this.destroying.Fire()
 	}
 }

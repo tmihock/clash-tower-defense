@@ -22,7 +22,7 @@ export class RoundService implements OnStart {
 	) {}
 
 	onStart() {
-		task.wait(5)
+		task.wait(3)
 		$print("Game started")
 		this.play()
 	}
@@ -30,12 +30,12 @@ export class RoundService implements OnStart {
 	public play() {
 		while (true) {
 			//
-			task.wait(ENEMY_SPAWN_RATE)
 			if (this.queuedEnemies.size() > 0) {
 				this.enemyService.createEnemy(this.queuedEnemies.dequeue()!)
 			} else {
 				this.enemyService.createEnemy(this.chooseRandomEnemy())
 			}
+			task.wait(ENEMY_SPAWN_RATE)
 		}
 	}
 
@@ -69,6 +69,7 @@ export class RoundService implements OnStart {
 
 		// 3. Choose random enemy from list of that rarity
 		const enemyIndex = math.floor(math.random() * enemiesOfRarity.size())
+
 		return enemiesOfRarity[enemyIndex]
 	}
 }

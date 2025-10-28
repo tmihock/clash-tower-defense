@@ -2,16 +2,12 @@ import { Networking } from "@flamework/networking"
 import { TowerName } from "./config/TowerConfig"
 import { EnemyName } from "./config/EnemyConfig"
 
+export type TargetMode = "First" | "Last" | "Closest"
 export interface EnemySyncInfo {
 	id: number
-	elapsed: number
 	pos: Vector3
-}
-
-export type TargetMode = "First" | "Last" | "Closest"
-export interface TowerSyncInfo {
-	id: number
-	damageDealt: number
+	elapsed: number
+	health: number
 }
 
 export type EquipBar = TowerName[]
@@ -41,7 +37,7 @@ interface ClientEvents {
 	towerDeleted(id: number): void
 	setTowerTargetMode(id: number, targetMode: TargetMode): void
 	towerAttackedEnemy(towerId: number, enemyId: number): void
-	syncTowers(info: TowerSyncInfo[]): void
+	// syncTowers(info: TowerSyncInfo[]): void
 
 	// Equip
 	setEquipBar(equipBar: EquipBar): void

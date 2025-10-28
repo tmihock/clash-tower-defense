@@ -53,7 +53,8 @@ export class TrackService implements OnStart {
 	}
 
 	public getTrack(): Track {
-		assert(this.track, "No track is currently set")
+		if (!this.track) this.track = Dependency<Components>().getAllComponents<Track>()[0]
+		$assert(this.track, "No Track component found!")
 		return this.track
 	}
 }

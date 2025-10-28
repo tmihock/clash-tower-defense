@@ -9,12 +9,13 @@ export interface RarityInfo {
 	weight: number
 }
 
+// Only include rarities that have enemies assigned to them
 export const EnemyRarities = {
-	Common: { color: "White", weight: 50 },
-	Uncommon: { color: "Green", weight: 30 },
-	Rare: { color: "Blue", weight: 15 },
-	Epic: { color: "Purple", weight: 1 },
-	Legendary: { color: "Orange", weight: 0.1 }
+	Common: { color: "White", weight: 50 }
+	// Uncommon: { color: "Green", weight: 30 },
+	// Rare: { color: "Blue", weight: 15 },
+	// Epic: { color: "Purple", weight: 1 },
+	// Legendary: { color: "Orange", weight: 0.1 }
 } satisfies Record<string, RarityInfo>
 
 export const EnemyConfig = {

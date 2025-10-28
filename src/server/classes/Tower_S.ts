@@ -53,6 +53,8 @@ export class Tower_S {
 
 	public attackEnemy(enemy: Enemy_S) {
 		this.lastAttack = os.clock()
+		// animation.Play()
+		// task.wait(animation.Length/2) // Change to be on swing finish
 		enemy.takeDamage(this.info.damage)
 		Events.towerAttackedEnemy.broadcast(this.id, enemy.id)
 		this.damageDealt += this.info.damage

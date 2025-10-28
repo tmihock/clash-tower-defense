@@ -8,6 +8,9 @@ import { ATTR_ID, ATTR_OWNER } from "shared/constants"
 
 const towerFolder = ReplicatedStorage.Assets.Towers
 
+/**
+ * Includes instance
+ */
 export class Tower_C {
 	public instance: PVInstance
 	public info: TowerInfo

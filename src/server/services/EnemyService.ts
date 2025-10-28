@@ -1,5 +1,5 @@
 import { Service, OnStart } from "@flamework/core"
-import { ReplicatedStorage, RunService } from "@rbxts/services"
+import { RunService } from "@rbxts/services"
 import { EnemyName } from "shared/config/EnemyConfig"
 import { Enemy_S } from "server/classes/Enemy_S"
 import { TrackService } from "./TrackService"
@@ -7,11 +7,10 @@ import { Events } from "server/networking"
 import Signal from "@rbxts/lemon-signal"
 import { ServerStateProvider } from "./ServerStateProvider"
 import { ENEMY_SPEED } from "shared/constants"
+import { EnemySyncInfo } from "shared/networking"
+import { IdManager } from "shared/util/IdManager"
 
-let currentId = 1
-function nextId(): number {
-	return currentId++
-}
+const idManager = new IdManager(9999)
 
 @Service({})
 export class EnemyService implements OnStart {
@@ -26,10 +25,25 @@ export class EnemyService implements OnStart {
 		private stateProvider: ServerStateProvider
 	) {}
 
-	onStart() {}
+	onStart() {
+		while (true) {
+			const enemySyncInfo = [...this.enemies]
+				.map(([_, enemy]) => enemy)
+				.map(enemy => {
+					return {
+						id: enemy.id,
+						pos: enemy.position,
+						health: enemy.getHealth(),
+						elapsed: os.clock() - enemy.timeSpawned
+					} as EnemySyncInfo
+				})
+			Events.syncEnemies.broadcast(enemySyncInfo)
+			task.wait(1.5)
+		}
+	}
 
 	public createEnemy(enemyName: EnemyName): Enemy_S {
-		const id = nextId()
+		const id = idManager.nextId()
 		const newEnemy = new Enemy_S(enemyName, id)
 
 		this.enemies.set(id, newEnemy)
@@ -74,8 +88,10 @@ export class EnemyService implements OnStart {
 	}
 
 	public killEnemy(id: number) {
+		print(debug.traceback())
 		const enemy = this.enemies.get(id)!
 		this.enemies.delete(id)
+		idManager.release(id)
 		enemy.destroying.Fire()
 		if (this.enemies.size() === 0) {
 			this.allEnemiesDied.Fire()

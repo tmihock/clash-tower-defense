@@ -134,6 +134,7 @@ export class PlayerStateProvider implements OnInit {
 				$print(`Loaded Data for: ${player.Name}`, data)
 				resolve(data)
 			} else {
+				$print(`No Data for: ${player.Name}, initializing new data.`)
 				resolve({})
 			}
 		})
