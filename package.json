@@ -4,7 +4,8 @@
 	"description": "",
 	"main": "index.js",
 	"scripts": {
-		"watch": "rbxtsc -w"
+		"watch": "rbxtsc -w",
+		"lint": "eslint src/"
 	},
 	"keywords": [],
 	"author": "",

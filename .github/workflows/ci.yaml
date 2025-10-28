@@ -19,10 +19,10 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: "20" # Or your preferred Node.js version
+          node-version: "20"
 
       - name: Install dependencies
-        run: npm install # Or yarn install, pnpm install
+        run: npm install
 
       - name: Run ESLint
-        run: npx eslint src/ # Assuming you have a 'lint' script in your package.json
+        run: npm run lint
