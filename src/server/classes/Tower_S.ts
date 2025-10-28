@@ -6,6 +6,7 @@ import { clock } from "shared/types"
 import { Enemy_S } from "./Enemy_S"
 import { Events } from "server/networking"
 import { TargetMode } from "shared/networking"
+import { PlayerStateProvider } from "server/services/PlayerStateProvider"
 
 export class Tower_S {
 	public targetMode: TargetMode = "First"
@@ -20,7 +21,8 @@ export class Tower_S {
 		public id: number,
 		public position: Vector3,
 		private enemyService: EnemyService,
-		public owner: Player
+		public owner: Player,
+		private playerStateProvider: PlayerStateProvider
 	) {
 		this.info = TowerConfig[towerName]
 		this.startAttacking()
@@ -42,18 +44,21 @@ export class Tower_S {
 					// Attack Cooldown
 					const elapsed = os.clock() - this.lastAttack
 					if (elapsed >= this.info.attackRate) {
-						this.dealDamage(targetEnemy)
+						this.attackEnemy(targetEnemy)
 					}
 				}
 			})
 		)
 	}
 
-	public dealDamage(enemy: Enemy_S) {
+	public attackEnemy(enemy: Enemy_S) {
 		this.lastAttack = os.clock()
 		enemy.takeDamage(this.info.damage)
 		Events.towerAttackedEnemy.broadcast(this.id, enemy.id)
 		this.damageDealt += this.info.damage
+
+		this.playerStateProvider.get(this.owner).money(old => old + this.info.damage * 1)
+		this.playerStateProvider.get(this.owner).exp(old => old + 1)
 	}
 
 	private findEnemy(targetMode: TargetMode, enemies: Map<number, Enemy_S>): Enemy_S | undefined {

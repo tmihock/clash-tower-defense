@@ -7,7 +7,7 @@ import {
 	UserInputService,
 	Workspace
 } from "@rbxts/services"
-import { ATTR_OWNER, Tower_C } from "client/classes/Tower_C"
+import { ATTR_OWNER } from "shared/constants"
 import { Events, Functions } from "client/networking"
 import { $assert } from "rbxts-transform-debug"
 import { TowerConfig, TowerName } from "shared/config/TowerConfig"
@@ -21,12 +21,25 @@ import { findFirstAncestorWithTag } from "shared/util/findFirstAncestorWithTag"
 import { TooltipUI } from "client/ui/Tooltip"
 import { TrackController } from "./TrackController"
 import { ClientStateProvider } from "./ClientStateProvider"
+import { Tower_C } from "client/classes/Tower_C"
+import { InventoryController } from "./InventoryController"
+import { $terrify } from "rbxts-transformer-t-new"
 
 const player = Players.LocalPlayer
 const playerGui = player.WaitForChild("PlayerGui") as PlayerGui
 const camera = Workspace.CurrentCamera
 const towerFolder = ReplicatedStorage.Assets.Towers
 
+const tTowerName = $terrify<TowerName>()
+
+/**
+ * TODO: Section off all code into new controllers
+ *	- Tooltips
+ *	- Placement
+ * 		+ Range Preview
+ *		+ Placement Preview
+ *	- Tower Rendering
+ */
 @Controller({})
 export class TowerController implements OnStart {
 	private isPlacing = false
@@ -47,6 +60,7 @@ export class TowerController implements OnStart {
 	}
 
 	onStart() {
+		// Setup range preview part
 		this.rangePreview.Anchored = true
 		this.rangePreview.CanCollide = false
 		this.rangePreview.Transparency = 1
@@ -56,11 +70,27 @@ export class TowerController implements OnStart {
 		this.rangePreview.Shape = Enum.PartType.Cylinder
 		this.rangePreview.Orientation = new Vector3(0, 90, 90)
 
+		// Equipping tower tools (to place)
+		player.CharacterAdded.Connect(char => {
+			const human = char.WaitForChild("Humanoid") as Humanoid
+
+			char.ChildAdded.Connect(child => {
+				if (!(child.IsA("Tool") && tTowerName(child.Name))) return
+
+				this.startPlacingTower(child)
+				const c = char.AncestryChanged.Connect((_, p) => {
+					if (p !== char) {
+						this.stopPlacingTower()
+						c.Disconnect()
+					}
+				})
+			})
+			human.Died.Connect(() => this.stopPlacingTower())
+		})
+
+		// Confirm placement
 		UserInputService.InputBegan.Connect((input, gpe) => {
 			if (gpe) return
-			// if (input.KeyCode === Enum.KeyCode.E) {
-			// 	this.togglePlacingTower()
-			// }
 
 			if (input.UserInputType === Enum.UserInputType.MouseButton1 && this.isPlacing) {
 				this.confirmTowerPlacement()
@@ -140,6 +170,7 @@ export class TowerController implements OnStart {
 	}
 
 	public stopPlacingTower() {
+		if (!this.isPlacing) return
 		this.isPlacing = false
 		this.selectedTower("None")
 		this.mouseStepped?.Disconnect()
@@ -148,7 +179,8 @@ export class TowerController implements OnStart {
 		this.previewModel?.Destroy()
 	}
 
-	public startPlacingTower(tower: TowerName) {
+	public startPlacingTower(tool: Tool) {
+		const tower = tool.Name as TowerName
 		if (this.isPlacing) this.stopPlacingTower()
 		if (tower === "None") return
 		this.selectedTower(tower)
@@ -182,6 +214,12 @@ export class TowerController implements OnStart {
 					previewHitbox.Color = new Color3(1, 0, 0)
 				}
 				preview.MoveTo(pos)
+			}
+		})
+
+		tool.AncestryChanged.Connect(parent => {
+			if (parent !== player.Character) {
+				this.stopPlacingTower()
 			}
 		})
 	}
@@ -262,21 +300,14 @@ export class TowerController implements OnStart {
 		$assert(placementPos, `this.mouseToTowerPos(${this.selectedTower}) returned undefined`)
 
 		const clone = this.previewModel?.Clone()
-		if (this.canBuy(selectedTower)) {
-			Functions.requestPlaceTower.invoke(placementPos, selectedTower).then(wasPlaced => {
-				if (wasPlaced) {
-					clone?.Destroy()
-				} else {
-					// Failed, make clone red then destroy or seomthing
-					clone?.Destroy()
-				}
-			})
-		}
-	}
-
-	private canBuy(tower: TowerName): boolean {
-		const { unlockedTowers, money } = this.stateProvider.playerState
-		return unlockedTowers().includes(tower) && money() >= TowerConfig[tower].price
+		Functions.requestPlaceTower.invoke(placementPos, selectedTower).then(wasPlaced => {
+			if (wasPlaced) {
+				clone?.Destroy()
+			} else {
+				// Failed, make clone red then destroy or seomthing
+				clone?.Destroy()
+			}
+		})
 	}
 
 	private mouseToTowerPos(tower: TowerName): Vector3 | undefined {
@@ -297,20 +328,6 @@ export class TowerController implements OnStart {
 
 			return new Vector3(X, Y, Z)
 		}
-	}
-
-	public togglePlacingTower(tower: TowerName): boolean
-	public togglePlacingTower(tower: TowerName, toggle: boolean): boolean
-	public togglePlacingTower(tower: TowerName, toggle?: boolean): boolean {
-		if (toggle === undefined) {
-			toggle = !this.isPlacing
-		}
-		if (this.isPlacing) {
-			this.stopPlacingTower()
-		} else {
-			this.startPlacingTower(tower)
-		}
-		return this.isPlacing
 	}
 }
 

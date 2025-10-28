@@ -11,7 +11,6 @@ const tSyncKey = $terrify<SyncKeys>()
 
 @Controller({})
 export class ClientStateProvider implements OnInit {
-	public health = atom<number>(100)
 	public selectedTower = atom<TowerName>("None")
 
 	public playerState = {} as {
@@ -28,9 +27,6 @@ export class ClientStateProvider implements OnInit {
 		Events.playerStateChanged.connect((key, state, prev) => {
 			if (!tSyncKey(key)) return
 			;(this.playerState[key] as Atom<any>)(state)
-		})
-		Events.healthChanged.connect(newHealth => {
-			this.health(newHealth)
 		})
 	}
 }

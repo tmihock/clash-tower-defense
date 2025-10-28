@@ -29,7 +29,6 @@ interface ClientEvents {
 	playerStateChanged(key: string, newValue: unknown, oldValue: unknown): void
 
 	// Game
-	healthChanged(newValue: number): void
 
 	// Enemies
 	enemySpawned(id: number, enemy: EnemyName): void

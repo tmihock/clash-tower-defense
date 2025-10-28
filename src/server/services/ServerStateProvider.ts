@@ -7,17 +7,7 @@ import { OnPlayerAdded } from "./PlayerService"
 	loadOrder: 0
 })
 export class ServerStateProvider implements OnStart, OnPlayerAdded {
-	public health = atom(100)
-	public gameStarted = atom(false)
-	public currentRound = atom(0)
+	onStart() {}
 
-	onStart() {
-		subscribe(this.health, newHealth => {
-			Events.healthChanged.broadcast(newHealth)
-		})
-	}
-
-	onPlayerAdded(player: Player): void {
-		Events.healthChanged.fire(player, this.health())
-	}
+	onPlayerAdded(player: Player): void {}
 }

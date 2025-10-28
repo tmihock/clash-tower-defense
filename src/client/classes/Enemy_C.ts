@@ -32,12 +32,11 @@ export class Enemy_C {
 
 	private startTravel() {
 		RunService.RenderStepped.Connect(dt => {
-			const { speed } = this.info
 			const elapsed = os.clock() - this.timeSpawned
-			const pos = this.trackController.getPositionOnTrack(speed, elapsed)
+			const pos = this.trackController.getPositionOnTrack(1, elapsed)
 
 			// Approximate movement direction using a small time step
-			const futurePos = this.trackController.getPositionOnTrack(speed, elapsed + dt)
+			const futurePos = this.trackController.getPositionOnTrack(1, elapsed + dt)
 
 			const dir = futurePos.sub(pos)
 

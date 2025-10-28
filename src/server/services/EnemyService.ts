@@ -6,6 +6,7 @@ import { TrackService } from "./TrackService"
 import { Events } from "server/networking"
 import Signal from "@rbxts/lemon-signal"
 import { ServerStateProvider } from "./ServerStateProvider"
+import { ENEMY_SPEED } from "shared/constants"
 
 let currentId = 1
 function nextId(): number {
@@ -52,21 +53,18 @@ export class EnemyService implements OnStart {
 	}
 
 	private incrementEnemyPosition(enemy: Enemy_S, dt: number) {
-		const { speed } = enemy.info
 		const elapsed = os.clock() - enemy.timeSpawned
 
 		// Approximate movement direction using a small time step
 		enemy.position = this.trackService.getPositionOnPath(
 			this.trackService.getWaypoints(),
-			speed,
+			ENEMY_SPEED,
 			elapsed
 		)
 
-		// Check if enemy reached the end
-		const distanceTravelled = speed * elapsed
+		// Enemy reached end -> kill it
+		const distanceTravelled = ENEMY_SPEED * elapsed
 		if (distanceTravelled >= this.trackService.getTrackLength()) {
-			const damage = enemy.info.damage
-			this.stateProvider.health(old => old - damage)
 			this.killEnemy(enemy.id)
 		}
 	}

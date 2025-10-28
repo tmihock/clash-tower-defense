@@ -13,11 +13,11 @@ export class MoneyService implements OnPlayerAdded, OnPlayerRemoving {
 	constructor(private playerStateProvider: PlayerStateProvider) {}
 
 	onPlayerAdded(player: Player) {
-		const { money } = this.playerStateProvider.get(player)
+		const { money, rebirth } = this.playerStateProvider.get(player)
 
 		// ReactRoblox semantics require using a portal for some reason
 		const root = createRoot(player.FindFirstChildOfClass("PlayerGui")!)
-		root.render(createPortal(<Leaderstats money={money} />, player))
+		root.render(createPortal(<Leaderstats money={money} rebirth={rebirth} />, player))
 		this.leaderstatsRoots.set(player, root)
 	}
 
@@ -27,15 +27,19 @@ export class MoneyService implements OnPlayerAdded, OnPlayerRemoving {
 	}
 }
 
-function Leaderstats(props: { money: Atom<number> }) {
-	const money = useAtom(props.money)
+interface LeaderstatsProps {
+	money: Atom<number>
+	rebirth: Atom<number>
+}
+
+function Leaderstats({ money, rebirth }: LeaderstatsProps) {
+	const moneyVal = useAtom(money)
+	const rebirthVal = useAtom(rebirth)
 
 	return (
 		<folder key="leaderstats">
-			<numbervalue key="Money" Value={money} />
-			{/*
-			<numbervalue key="Exp" Value={exp} />
-			 */}
+			<numbervalue key="Money" Value={moneyVal} />
+			<numbervalue key="Rebirth" Value={rebirthVal} />
 		</folder>
 	)
 }

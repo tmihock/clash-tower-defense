@@ -16,7 +16,6 @@ import { $print } from "rbxts-transform-debug"
 import { $terrify } from "rbxts-transformer-t-new"
 import { Events } from "server/networking"
 import { TowerName } from "shared/config/TowerConfig"
-import { EquipBar } from "shared/networking"
 
 const DATA_STORE_NAME = "PlayerData"
 const DATA_STORE = DataStoreService.GetDataStore(DATA_STORE_NAME)
@@ -32,8 +31,8 @@ export type AtomsFrom<T> = {
 export interface PlayerState {
 	money: number
 	exp: number
-	unlockedTowers: TowerName[]
-	equipped: EquipBar
+	rebirth: number
+	inventory: TowerName[]
 }
 
 // Allows client side to access SyncKeys
@@ -44,8 +43,8 @@ const SYNC_KEYS = Modding.inspect<SyncKeys[]>()
 const DEFAULT_PLAYER_STATE = {
 	money: 100,
 	exp: 0,
-	unlockedTowers: ["Barbarian"] as TowerName[],
-	equipped: ["Barbarian"] as EquipBar
+	rebirth: 0,
+	inventory: [] as TowerName[]
 } satisfies PlayerState
 
 const tPlayerState = $terrify<PlayerState>()

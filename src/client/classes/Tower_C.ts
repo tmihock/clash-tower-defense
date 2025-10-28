@@ -4,11 +4,9 @@ import { EnemyController } from "client/controllers/EnemyController"
 import { Enemy_C } from "./Enemy_C"
 import { TargetMode } from "shared/networking"
 import Maid from "@rbxts/maid"
+import { ATTR_ID, ATTR_OWNER } from "shared/constants"
 
 const towerFolder = ReplicatedStorage.Assets.Towers
-
-export const ATTR_OWNER = "owner"
-export const ATTR_ID = "id"
 
 export class Tower_C {
 	public instance: PVInstance
