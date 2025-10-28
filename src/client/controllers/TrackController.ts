@@ -6,7 +6,7 @@ import type { TrackInstance } from "server/components/Track"
 @Controller({})
 export class TrackController implements OnInit, OnStart {
 	private waypoints = [] as Vector3[]
-	private trackLength: number = -1
+	private trackLength = -1
 	private trackInstance: TrackInstance = undefined as never as TrackInstance
 
 	onInit() {

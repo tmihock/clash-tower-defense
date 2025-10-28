@@ -1,14 +1,5 @@
-import { Components } from "@flamework/components"
-import { Service, OnStart, Dependency } from "@flamework/core"
-import { $assert } from "rbxts-transform-debug"
+import { Service, OnStart } from "@flamework/core"
 import { Track } from "server/components/Track"
-import { FolderWith } from "shared/types"
-
-interface TrackInstance extends Instance {
-	waypoints: FolderWith<BasePart>
-	path: FolderWith<BasePart>
-	enemies: Folder
-}
 
 @Service({})
 export class TrackService implements OnStart {

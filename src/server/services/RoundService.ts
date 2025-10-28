@@ -54,7 +54,7 @@ export class RoundService implements OnStart {
 	private giveRoundEndReward(round: number) {
 		const moneyToGive = 100 * round
 		const expToGive = math.random(1, 5)
-		this.playerStateProvider.playerState.forEach((state, player) => {
+		this.playerStateProvider.playerState.forEach(state => {
 			state.exp(old => old + expToGive)
 			state.money(old => old + moneyToGive)
 		})
