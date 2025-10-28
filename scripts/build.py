@@ -5,7 +5,7 @@ import sys
 
 def main():
 	# Allows use on any os's file systems
-	fix_lighting = os.path.join("scripts", "fixLighting.py")
+	fix_lighting = os.path.join("scripts", "fix_lighting.py")
 	save_models = os.path.join("scripts", "save.luau")
 
 	try:
