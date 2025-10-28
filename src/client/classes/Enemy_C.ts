@@ -2,7 +2,6 @@ import { EnemyConfig, EnemyInfo, EnemyName } from "shared/config/EnemyConfig"
 import { ReplicatedStorage, RunService, Workspace } from "@rbxts/services"
 import { TrackController } from "client/controllers/TrackController"
 import { Dependency } from "@flamework/core"
-import { $print } from "rbxts-transform-debug"
 
 const enemyFolder = ReplicatedStorage.Assets.Enemies
 

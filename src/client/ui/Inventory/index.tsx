@@ -1,6 +1,5 @@
-import { atom, Atom } from "@rbxts/charm"
-import React, { useState } from "@rbxts/react"
-import { useAtom } from "@rbxts/react-charm"
+import { Atom } from "@rbxts/charm"
+import React from "@rbxts/react"
 import { TowerName } from "shared/config/TowerConfig"
 import { EquipBarProps, EquipBarUI } from "./EquipBar"
 import { UnlockInventory } from "./UnlockInventory"

@@ -1,11 +1,7 @@
 import { Service, OnStart } from "@flamework/core"
-import { TowerName } from "shared/config/TowerConfig"
 import { $terrify } from "rbxts-transformer-t-new"
 import { Events } from "server/networking"
 import { EquipBar } from "shared/networking"
-import { $assert } from "rbxts-transform-debug"
-import { InventoryService } from "./InventoryService"
-import { EQUIP_BAR_SIZE } from "shared/constants"
 import { PlayerStateProvider } from "./PlayerStateProvider"
 
 const SAVE_KEY = "equipped"

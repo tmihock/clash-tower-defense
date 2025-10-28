@@ -1,5 +1,5 @@
 import { Service, OnStart } from "@flamework/core"
-import { Atom, atom, subscribe } from "@rbxts/charm"
+import { Atom } from "@rbxts/charm"
 import { OnPlayerAdded, OnPlayerRemoving } from "./PlayerService"
 import { Events, Functions } from "server/networking"
 import { ServerStateProvider } from "./ServerStateProvider"

@@ -1,10 +1,8 @@
-import { Service, OnStart } from "@flamework/core"
-import { $terrify } from "rbxts-transformer-t-new"
+import { Service } from "@flamework/core"
 import { TowerConfig, TowerName } from "shared/config/TowerConfig"
 import { Events } from "server/networking"
 import { PlayerStateProvider } from "./PlayerStateProvider"
 import { OnPlayerAdded } from "./PlayerService"
-import { computed, subscribe } from "@rbxts/charm"
 
 @Service({})
 export class InventoryService implements OnPlayerAdded {

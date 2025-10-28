@@ -1,4 +1,4 @@
-import { atom, Atom, subscribe } from "@rbxts/charm"
+import { Atom, subscribe } from "@rbxts/charm"
 import React, { useEffect, useState } from "@rbxts/react"
 import { useAtom } from "@rbxts/react-charm"
 import { TowerName } from "shared/config/TowerConfig"

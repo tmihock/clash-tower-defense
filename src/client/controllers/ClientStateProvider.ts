@@ -1,4 +1,4 @@
-import { Controller, Modding, OnInit, OnStart } from "@flamework/core"
+import { Controller, Modding, OnInit } from "@flamework/core"
 import { Atom, atom } from "@rbxts/charm"
 import { Events } from "client/networking"
 import { $terrify } from "rbxts-transformer-t-new"

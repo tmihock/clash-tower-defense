@@ -1,12 +1,8 @@
 import { OnStart } from "@flamework/core"
 import { Component, BaseComponent } from "@flamework/components"
 import { TAG_TRACK } from "shared/constants"
-import { RunService, Workspace } from "@rbxts/services"
+import { Workspace } from "@rbxts/services"
 import { FolderWith } from "shared/types"
-import { GameService } from "server/services/GameService"
-import { $print } from "rbxts-transform-debug"
-import { Enemy_S } from "server/classes/Enemy_S"
-import { EnemyService } from "server/services/EnemyService"
 
 type NumberString = `${number}`
 
