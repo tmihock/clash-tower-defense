@@ -1,3 +1,5 @@
+/.vscode
+
 /node_modules
 /out
 /include
@@ -5,6 +7,7 @@
 *.rbxlx.lock
 *.rbxl.lock
 
+sourcemap.json
 flamework.build
 
 .DS_Store
