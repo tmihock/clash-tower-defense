@@ -30,7 +30,6 @@ interface ClientEvents {
 	enemySpawned(id: number, enemy: EnemyName): void
 	enemyDeleted(id: number): void
 	updateEnemyHealth(id: number, value: number): void
-	syncEnemies(info: EnemySyncInfo[]): void
 
 	// Towers
 	towerPlaced(id: number, pos: Vector3, tower: TowerName, owner: Player): void

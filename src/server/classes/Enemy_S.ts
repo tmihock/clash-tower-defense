@@ -3,12 +3,13 @@ import Signal from "@rbxts/lemon-signal"
 import { Events } from "server/networking"
 import { Dependency } from "@flamework/core"
 import { EnemyService } from "server/services/EnemyService"
+import { SharedClock } from "shared/util/SharedClock"
 
 export class Enemy_S {
 	private health: number
 
 	public info: EnemyInfo
-	public timeSpawned = os.clock()
+	public timeSpawned = SharedClock()
 	public position: Vector3 = Vector3.zero
 	public destroying = new Signal()
 

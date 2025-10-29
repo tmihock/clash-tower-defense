@@ -9,6 +9,7 @@ import { ServerStateProvider } from "./ServerStateProvider"
 import { ENEMY_SPEED } from "shared/constants"
 import { EnemySyncInfo } from "shared/networking"
 import { IdManager } from "shared/util/IdManager"
+import { SharedClock } from "shared/util/SharedClock"
 
 const idManager = new IdManager(9999)
 
@@ -25,22 +26,7 @@ export class EnemyService implements OnStart {
 		private stateProvider: ServerStateProvider
 	) {}
 
-	onStart() {
-		while (true) {
-			const enemySyncInfo = [...this.enemies]
-				.map(([_, enemy]) => enemy)
-				.map(enemy => {
-					return {
-						id: enemy.id,
-						pos: enemy.position,
-						health: enemy.getHealth(),
-						elapsed: os.clock() - enemy.timeSpawned
-					} as EnemySyncInfo
-				})
-			Events.syncEnemies.broadcast(enemySyncInfo)
-			task.wait(1.5)
-		}
-	}
+	onStart() {}
 
 	public createEnemy(enemyName: EnemyName): Enemy_S {
 		const id = idManager.nextId()
@@ -67,7 +53,7 @@ export class EnemyService implements OnStart {
 	}
 
 	private incrementEnemyPosition(enemy: Enemy_S, dt: number) {
-		const elapsed = os.clock() - enemy.timeSpawned
+		const elapsed = SharedClock() - enemy.timeSpawned
 
 		// Approximate movement direction using a small time step
 		enemy.position = this.trackService.getPositionOnPath(

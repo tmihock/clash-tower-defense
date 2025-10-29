@@ -5,6 +5,7 @@ import { Enemy_C } from "./Enemy_C"
 import { TargetMode } from "shared/networking"
 import Maid from "@rbxts/maid"
 import { ATTR_ID, ATTR_OWNER } from "shared/constants"
+import { SharedClock } from "shared/util/SharedClock"
 
 const towerFolder = ReplicatedStorage.Assets.Towers
 
@@ -85,8 +86,8 @@ export class Tower_C {
 
 			// Pick the enemy with maximum progress (furthest along path)
 			return enemiesInRange.reduce((best, enemy) => {
-				const enemyProgress = os.clock() - enemy.timeSpawned
-				const bestProgress = os.clock() - best.timeSpawned
+				const enemyProgress = SharedClock() - enemy.timeSpawned
+				const bestProgress = SharedClock() - best.timeSpawned
 
 				if (this.targetMode === "First") {
 					return enemyProgress > bestProgress ? enemy : best

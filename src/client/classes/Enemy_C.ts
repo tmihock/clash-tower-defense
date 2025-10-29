@@ -3,13 +3,14 @@ import { ReplicatedStorage, RunService, Workspace } from "@rbxts/services"
 import { TrackController } from "client/controllers/TrackController"
 import { Dependency } from "@flamework/core"
 import { $print } from "rbxts-transform-debug"
+import { SharedClock } from "shared/util/SharedClock"
 
 const enemyFolder = ReplicatedStorage.Assets.Enemies
 
 export class Enemy_C {
 	public position = Vector3.one
 	public health: number
-	public timeSpawned = os.clock()
+	public timeSpawned = SharedClock()
 
 	private info: EnemyInfo
 	private instance: PVInstance
@@ -32,7 +33,7 @@ export class Enemy_C {
 
 	private startTravel() {
 		RunService.RenderStepped.Connect(dt => {
-			const elapsed = os.clock() - this.timeSpawned
+			const elapsed = SharedClock() - this.timeSpawned
 			const pos = this.trackController.getPositionOnTrack(1, elapsed)
 
 			// Approximate movement direction using a small time step

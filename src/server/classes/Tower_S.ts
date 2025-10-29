@@ -7,6 +7,7 @@ import { Enemy_S } from "./Enemy_S"
 import { Events } from "server/networking"
 import { TargetMode } from "shared/networking"
 import { PlayerStateProvider } from "server/services/PlayerStateProvider"
+import { SharedClock } from "shared/util/SharedClock"
 
 export class Tower_S {
 	public targetMode: TargetMode = "First"
@@ -42,7 +43,7 @@ export class Tower_S {
 				// Found an enemy within range
 				if (targetEnemy) {
 					// Attack Cooldown
-					const elapsed = os.clock() - this.lastAttack
+					const elapsed = SharedClock() - this.lastAttack
 					if (elapsed >= this.info.attackRate) {
 						this.attackEnemy(targetEnemy)
 					}
@@ -52,7 +53,7 @@ export class Tower_S {
 	}
 
 	public attackEnemy(enemy: Enemy_S) {
-		this.lastAttack = os.clock()
+		this.lastAttack = SharedClock()
 		// animation.Play()
 		// task.wait(animation.Length/2) // Change to be on swing finish
 		enemy.takeDamage(this.info.damage)
@@ -97,8 +98,8 @@ export class Tower_S {
 
 			// Pick the enemy with maximum progress (furthest along path)
 			return enemiesInRange.reduce((best, enemy) => {
-				const enemyProgress = os.clock() - enemy.timeSpawned
-				const bestProgress = os.clock() - best.timeSpawned
+				const enemyProgress = SharedClock() - enemy.timeSpawned
+				const bestProgress = SharedClock() - best.timeSpawned
 
 				if (targetMode === "First") {
 					return enemyProgress > bestProgress ? enemy : best
