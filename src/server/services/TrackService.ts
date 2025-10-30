@@ -1,15 +1,11 @@
 import { Components } from "@flamework/components"
-import { Service, OnStart, Dependency } from "@flamework/core"
+import { Service, Dependency } from "@flamework/core"
 import { $assert } from "rbxts-transform-debug"
 import { Track } from "server/components/Track"
 
 @Service({})
-export class TrackService implements OnStart {
+export class TrackService {
 	private track: Track | undefined
-
-	constructor() {}
-
-	onStart() {}
 
 	public getPositionOnPath(waypoints: Vector3[], speed: number, t: number): Vector3 {
 		const d = speed * t // total distance traveled
@@ -33,16 +29,12 @@ export class TrackService implements OnStart {
 		return waypoints[waypoints.size() - 1]
 	}
 
-	public setTrack(track?: Track) {
-		this.track = track
-	}
-
 	public getWaypoints(): Vector3[] {
-		return this.getTrack()!.getWaypoints()
+		return this.getTrack().getWaypoints()
 	}
 
 	public getTrackLength(): number {
-		return this.getTrack()!.getTrackLength()
+		return this.getTrack().getTrackLength()
 	}
 
 	public getTrack(): Track {

@@ -1,25 +1,16 @@
 import { Service, OnStart, Modding } from "@flamework/core"
 import { EnemyService } from "./EnemyService"
 import { $print } from "rbxts-transform-debug"
-import { PlayerStateProvider } from "./PlayerStateProvider"
-import { ServerStateProvider } from "./ServerStateProvider"
 import { ENEMY_SPAWN_RATE } from "shared/constants"
 import { EnemyConfig, EnemyName, EnemyRarities, Rarity } from "shared/config/EnemyConfig"
 import { Queue } from "@rbxts/better-queue"
 
-/**
- * TODO: Allow pausing enemy spawns
- */
+/** TODO: Allow pausing enemy spawns */
 @Service({})
-export class RoundService implements OnStart {
-	private isSpawning = false
+export class EnemySpawnerService implements OnStart {
 	private queuedEnemies = new Queue<EnemyName>()
 
-	constructor(
-		private enemyService: EnemyService,
-		private playerStateProvider: PlayerStateProvider,
-		private serverStateProvider: ServerStateProvider
-	) {}
+	constructor(private enemyService: EnemyService) {}
 
 	onStart() {
 		task.wait(3)
@@ -39,6 +30,11 @@ export class RoundService implements OnStart {
 		}
 	}
 
+	/**
+	 * Queues an enemy to be spawned next
+	 *
+	 * @param {EnemyName} enemyName
+	 */
 	public queueEnemy(enemyName: EnemyName) {
 		this.queuedEnemies.enqueue(enemyName)
 	}

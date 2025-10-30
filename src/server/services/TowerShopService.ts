@@ -1,7 +1,7 @@
 import { Service, OnStart } from "@flamework/core"
 import { Functions } from "server/networking"
 import { PlayerStateProvider } from "./PlayerStateProvider"
-import { TowerConfig } from "shared/config/TowerConfig"
+import { TowerConfig, TowerName } from "shared/config/TowerConfig"
 import { InventoryService } from "./InventoryService"
 
 @Service({})
@@ -12,19 +12,21 @@ export class TowerShopService implements OnStart {
 	) {}
 
 	onStart() {
-		Functions.requestBuyTower.setCallback((player, tower) => {
-			const { money, exp } = this.playerStateProvider.get(player)
-			const { price, expReq } = TowerConfig[tower]
+		Functions.requestBuyTower.setCallback((p, t) => this.onPurchaseRequest(p, t))
+	}
 
-			const canBuy = money() >= price && exp() >= expReq
+	private onPurchaseRequest(player: Player, tower: TowerName) {
+		const { money, exp } = this.playerStateProvider.get(player)
+		const { price, expReq } = TowerConfig[tower]
 
-			if (canBuy) {
-				money(prev => prev - price)
-				this.inventoryService.giveTower(player, tower)
-				return true
-			} else {
-				return false
-			}
-		})
+		const canBuy = money() >= price && exp() >= expReq
+
+		if (canBuy) {
+			money(prev => prev - price)
+			this.inventoryService.giveTower(player, tower)
+			return true
+		} else {
+			return false
+		}
 	}
 }

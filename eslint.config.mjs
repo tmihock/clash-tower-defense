@@ -10,6 +10,7 @@ export default defineConfig([
 
 	// then layer your overrides
 	{
+		ignores: ["eslint.config.mjs"],
 		plugins: {
 			"@stylistic": stylistic,
 			"unused-imports": unusedImports
