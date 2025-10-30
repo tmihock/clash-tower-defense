@@ -1,6 +1,4 @@
 import { Service, OnStart } from "@flamework/core"
-import { atom, subscribe } from "@rbxts/charm"
-import { Events } from "server/networking"
 import { OnPlayerAdded } from "./PlayerService"
 
 @Service({

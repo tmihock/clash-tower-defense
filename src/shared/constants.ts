@@ -1,3 +1,5 @@
+export const KEY_OPEN_TOWER_SHOP = Enum.KeyCode.E
+
 export const EQUIP_BAR_SIZE = 4
 
 export const MONEY_LEADERSTAT_NAME = "Gold"

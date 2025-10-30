@@ -7,7 +7,6 @@ import { Events } from "server/networking"
 import Signal from "@rbxts/lemon-signal"
 import { ServerStateProvider } from "./ServerStateProvider"
 import { ENEMY_SPEED } from "shared/constants"
-import { EnemySyncInfo } from "shared/networking"
 import { IdManager } from "shared/util/IdManager"
 import { SharedClock } from "shared/util/SharedClock"
 
@@ -28,6 +27,13 @@ export class EnemyService implements OnStart {
 
 	onStart() {}
 
+	/**
+	 * Creates, and spawns, a new enemy. Enemies created immediately start their
+	 * travel path.
+	 *
+	 * @param {EnemyName} enemyName Type of enemy to be created.
+	 * @returns {Enemy_S} Server-side enemy object. (Not instance)
+	 */
 	public createEnemy(enemyName: EnemyName): Enemy_S {
 		const id = idManager.nextId()
 		const newEnemy = new Enemy_S(enemyName, id)
@@ -73,8 +79,13 @@ export class EnemyService implements OnStart {
 		return this.enemies
 	}
 
+	/**
+	 * Kills (Destroys) the enemy from the id. This should be the only method
+	 * called externally to kill an enemy.
+	 *
+	 * @param {number} id EnemyId
+	 */
 	public killEnemy(id: number) {
-		print(debug.traceback())
 		const enemy = this.enemies.get(id)!
 		this.enemies.delete(id)
 		idManager.release(id)

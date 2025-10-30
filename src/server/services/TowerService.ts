@@ -6,7 +6,6 @@ import { TrackService } from "./TrackService"
 import { Tower_S } from "server/classes/Tower_S"
 import { EnemyService } from "./EnemyService"
 import { Events, Functions } from "server/networking"
-import { MoneyService } from "./MoneyService"
 import { PlayerStateProvider } from "./PlayerStateProvider"
 
 const towerFolder = ReplicatedStorage.Assets.Towers

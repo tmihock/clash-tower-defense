@@ -1,6 +1,6 @@
 /**
- * Provides and persists player state such as money, experience, and unlocked towers.
- * Uses Atoms from @rbxts/charm for reactive state management.
+ * Provides and persists player state such as money, experience, and unlocked
+ * towers. Uses Atoms from @rbxts/charm for reactive state management.
  *
  * Syncs data in SyncKeys to client
  *
@@ -35,9 +35,10 @@ export interface PlayerState {
 	inventory: TowerName[]
 }
 
-// Allows client side to access SyncKeys
+/** Keys that should be replicated to server. */
 export type SyncKeys = keyof PlayerState
 // export type SyncKeys = "money" | "unlockedTowers"
+
 const SYNC_KEYS = Modding.inspect<SyncKeys[]>()
 
 const DEFAULT_PLAYER_STATE = {
@@ -58,7 +59,32 @@ export class PlayerStateProvider implements OnInit {
 	private playerLoaded = new Signal<(player: Player) => void>()
 	private atomMaids = new Map<Atom<any>, Maid>()
 
-	// YIELDS, waits until data is loaded
+	/**
+	 * ⚠️ **YIELDS:** This method suspends execution until the player's data is
+	 * loaded.
+	 *
+	 * There are two usage patterns:
+	 *
+	 * 1. `get(player: Player): AtomsFrom<PlayerState>` — returns the entire set of
+	 *    atoms for the player.
+	 * 2. `get(player: Player, key: K): AtomsFrom<PlayerState>[K]` — returns a single
+	 *    atom from the specified key.
+	 *
+	 * @example
+	 * 	// Get all atoms for a player
+	 * 	const atoms = manager.get(player)
+	 * 	console.log(atoms.health.get(), atoms.mana.get())
+	 *
+	 * @example
+	 * 	// Get a specific atom for a key
+	 * 	const healthAtom = manager.get(player, "health")
+	 * 	console.log(healthAtom.get())
+	 *
+	 * @param {Player} player - The player whose state should be retrieved.
+	 * @param {K} key - An optional key of `PlayerState` to get a specific atom.
+	 * @returns Returns the full map of atoms if `key` is omitted, or the specific
+	 *   atom if `key` is provided.
+	 */
 	public get(player: Player): AtomsFrom<PlayerState>
 	public get<K extends keyof PlayerState>(player: Player, key: K): AtomsFrom<PlayerState>
 	public get<K extends keyof PlayerState>(
@@ -85,8 +111,30 @@ export class PlayerStateProvider implements OnInit {
 	}
 
 	/**
-	 * Used to automatically clean up subscriptions when playerState is destroyed
-	 * DO NOT subscribe directly to atoms from get()
+	 * Subscribes to changes in an atom inside PlayerState, automatically cleans
+	 * up all subscriptions when a player leaves.
+	 *
+	 * There are two usage patterns:
+	 *
+	 * 1. `subscribe(player: Player, key: K, listener: (state: PlayerState[K], prev:
+	 *    PlayerState[K]) => void)` — subscribes to a specific key of a player's
+	 *    state.
+	 * 2. `subscribe(atom: Atom<T>, listener: (state: T, prev: T) => void)` —
+	 *    subscribes directly to an atom.
+	 *
+	 * @example
+	 * 	// Subscribe to a player state key
+	 * 	manager.subscribe(player, "health", (health, prev) => {
+	 * 		console.log(`Health changed: ${prev} -> ${health}`)
+	 * 	})
+	 *
+	 * @example
+	 * 	// Subscribe directly to an atom
+	 * 	manager.subscribe(someAtom, (value, prev) => {
+	 * 		console.log(`Value changed: ${prev} -> ${value}`)
+	 * 	})
+	 *
+	 * @returns {void}
 	 */
 	public subscribe<K extends keyof PlayerState>(
 		player: Player,

@@ -7,7 +7,7 @@ import React from "@rbxts/react"
 import ReactRoblox, { createPortal, createRoot } from "@rbxts/react-roblox"
 
 @Service({})
-export class MoneyService implements OnPlayerAdded, OnPlayerRemoving {
+export class LeaderstatsService implements OnPlayerAdded, OnPlayerRemoving {
 	private leaderstatsRoots = new Map<Player, ReactRoblox.Root>()
 
 	constructor(private playerStateProvider: PlayerStateProvider) {}

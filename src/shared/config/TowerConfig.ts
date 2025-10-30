@@ -9,8 +9,10 @@ export interface TowerInfo {
 }
 
 export const TowerConfig = {
-	// null object because undefined messes with array methods
-	// Used in equip bar
+	/**
+	 * Null object must be used instead of undefined because Array methods require
+	 * that all elements be defined.
+	 */
 	None: {
 		id: -1,
 		expReq: -1,

@@ -37,21 +37,12 @@ interface ClientEvents {
 	setTowerTargetMode(id: number, targetMode: TargetMode): void
 	towerAttackedEnemy(towerId: number, enemyId: number): void
 	// syncTowers(info: TowerSyncInfo[]): void
-
-	// Equip
-	setEquipBar(equipBar: EquipBar): void
-	updateEquipBar(index: number, value: TowerName): void
-
-	// Inventory
-	setUnlockedInventory(inventory: TowerName[]): void
-	addToUnlockedInventory(tower: TowerName): void
-	removeFromUnlockedInventory(tower: TowerName): void
 }
 
 // Client -> Server -> Client functions
 interface ServerFunctions {
 	requestPlaceTower(pos: Vector3, tower: TowerName): boolean
-	requestStartGame(): boolean
+	requestBuyTower(towerName: TowerName): boolean
 }
 
 // Server -> Client -> Server functions

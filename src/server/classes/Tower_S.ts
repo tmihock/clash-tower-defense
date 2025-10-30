@@ -111,6 +111,7 @@ export class Tower_S {
 		}
 	}
 
+	/** Should only be called by TowerService */
 	destroy() {
 		this.maid.DoCleaning()
 	}

@@ -4,5 +4,10 @@
 	"semi": false,
 	"trailingComma": "none",
 	"arrowParens": "avoid",
-	"printWidth": 100
+	"printWidth": 100,
+	"proseWrap": "always",
+
+	"plugins": ["prettier-plugin-jsdoc"],
+	"jsdocPrintWidth": 80,
+	"jsdocWrapDescriptions": true
 }
