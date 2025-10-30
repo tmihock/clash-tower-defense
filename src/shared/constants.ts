@@ -1,4 +1,5 @@
 export const KEY_OPEN_TOWER_SHOP = Enum.KeyCode.E
+export const INPUT_PLACE_TOWER = Enum.UserInputType.MouseButton1
 
 export const EQUIP_BAR_SIZE = 4
 

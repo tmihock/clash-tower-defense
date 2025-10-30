@@ -1,7 +1,7 @@
 import { Service, OnStart } from "@flamework/core"
 import { Functions } from "server/networking"
 import { PlayerStateProvider } from "./PlayerStateProvider"
-import { TowerConfig, TowerName } from "shared/config/TowerConfig"
+import { TowerConfig } from "shared/config/TowerConfig"
 import { InventoryService } from "./InventoryService"
 
 @Service({})

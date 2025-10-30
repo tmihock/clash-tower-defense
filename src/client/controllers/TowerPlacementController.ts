@@ -1,29 +1,19 @@
 import { Controller, OnStart } from "@flamework/core"
 import {
-	CollectionService,
 	Players,
 	ReplicatedStorage,
 	RunService,
 	UserInputService,
 	Workspace
 } from "@rbxts/services"
-import { ATTR_OWNER } from "shared/constants"
-import { Events, Functions } from "client/networking"
+import { Functions } from "client/networking"
 import { $assert } from "rbxts-transform-debug"
 import { TowerConfig, TowerName } from "shared/config/TowerConfig"
-import { EnemyController } from "./EnemyController"
-import { TargetMode } from "shared/networking"
-import { Atom, atom } from "@rbxts/charm"
-import { createRoot } from "@rbxts/react-roblox"
-import React from "@rbxts/react"
-import { TAG_TOWER } from "shared/constants"
-import { findFirstAncestorWithTag } from "shared/util/findFirstAncestorWithTag"
-import { TooltipUI } from "client/ui/Tooltip"
+import { Atom } from "@rbxts/charm"
 import { TrackController } from "./TrackController"
 import { ClientStateProvider } from "./ClientStateProvider"
-import { Tower_C } from "client/classes/Tower_C"
-import { InventoryController } from "./InventoryController"
 import { $terrify } from "rbxts-transformer-t-new"
+import { INPUT_PLACE_TOWER } from "shared/constants"
 
 const player = Players.LocalPlayer
 const playerGui = player.WaitForChild("PlayerGui") as PlayerGui
@@ -32,9 +22,7 @@ const towerFolder = ReplicatedStorage.Assets.Towers
 
 const tTowerName = $terrify<TowerName>()
 
-/**
- * Handles tower placement (preview, input, placement logic, etc.)
- */
+/** Handles tower placement (preview, input, placement logic, etc.) */
 @Controller({})
 export class TowerPlacementController implements OnStart {
 	private isPlacing = false
@@ -84,7 +72,7 @@ export class TowerPlacementController implements OnStart {
 		UserInputService.InputBegan.Connect((input, gpe) => {
 			if (gpe) return
 
-			if (input.UserInputType === Enum.UserInputType.MouseButton1 && this.isPlacing) {
+			if (input.UserInputType === INPUT_PLACE_TOWER && this.isPlacing) {
 				this.confirmTowerPlacement()
 			}
 		})
