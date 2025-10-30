@@ -1,11 +1,12 @@
 /**
- * Increments up to max, then goes back to 0, doesn't reuse IDs that aren't released.
+ * Increments up to max, then goes back to 0, doesn't reuse IDs that aren't
+ * released.
  */
 export class IdManager {
 	private currentId = 0
 	private activeIds = new Set<number>()
 
-	constructor(private readonly maxId: number = 10000) {
+	constructor(private readonly maxId = 10000) {
 		this.maxId = math.max(1, maxId) // must be ≥1
 	}
 
