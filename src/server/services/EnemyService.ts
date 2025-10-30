@@ -6,11 +6,11 @@ import { TrackService } from "./TrackService"
 import { Events } from "server/networking"
 import Signal from "@rbxts/lemon-signal"
 import { ServerStateProvider } from "./ServerStateProvider"
+import { ENEMY_SPEED } from "shared/constants"
+import { IdManager } from "shared/util/IdManager"
+import { SharedClock } from "shared/util/SharedClock"
 
-let currentId = 1
-function nextId(): number {
-	return currentId++
-}
+const idManager = new IdManager(9999)
 
 @Service({})
 export class EnemyService implements OnStart {
@@ -27,8 +27,15 @@ export class EnemyService implements OnStart {
 
 	onStart() {}
 
+	/**
+	 * Creates, and spawns, a new enemy. Enemies created immediately start their
+	 * travel path.
+	 *
+	 * @param {EnemyName} enemyName Type of enemy to be created.
+	 * @returns {Enemy_S} Server-side enemy object. (Not instance)
+	 */
 	public createEnemy(enemyName: EnemyName): Enemy_S {
-		const id = nextId()
+		const id = idManager.nextId()
 		const newEnemy = new Enemy_S(enemyName, id)
 
 		this.enemies.set(id, newEnemy)
@@ -52,21 +59,18 @@ export class EnemyService implements OnStart {
 	}
 
 	private incrementEnemyPosition(enemy: Enemy_S, dt: number) {
-		const { speed } = enemy.info
-		const elapsed = os.clock() - enemy.timeSpawned
+		const elapsed = SharedClock() - enemy.timeSpawned
 
 		// Approximate movement direction using a small time step
 		enemy.position = this.trackService.getPositionOnPath(
 			this.trackService.getWaypoints(),
-			speed,
+			ENEMY_SPEED,
 			elapsed
 		)
 
-		// Check if enemy reached the end
-		const distanceTravelled = speed * elapsed
+		// Enemy reached end -> kill it
+		const distanceTravelled = ENEMY_SPEED * elapsed
 		if (distanceTravelled >= this.trackService.getTrackLength()) {
-			const damage = enemy.info.damage
-			this.stateProvider.health(old => old - damage)
 			this.killEnemy(enemy.id)
 		}
 	}
@@ -75,9 +79,16 @@ export class EnemyService implements OnStart {
 		return this.enemies
 	}
 
+	/**
+	 * Kills (Destroys) the enemy from the id. This should be the only method
+	 * called externally to kill an enemy.
+	 *
+	 * @param {number} id EnemyId
+	 */
 	public killEnemy(id: number) {
 		const enemy = this.enemies.get(id)!
 		this.enemies.delete(id)
+		idManager.release(id)
 		enemy.destroying.Fire()
 		if (this.enemies.size() === 0) {
 			this.allEnemiesDied.Fire()

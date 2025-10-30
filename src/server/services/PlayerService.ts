@@ -1,39 +1,40 @@
 import { Service, OnStart, OnInit } from "@flamework/core"
 import { Modding } from "@flamework/core"
-import { atom } from "@rbxts/charm"
 import { Players, Workspace } from "@rbxts/services"
 
 const characterFolder = Workspace.Live
 
-// Fires when new player joins
-// Might delay when server isn't ignited
+/** Hook into the OnPlayerAdded lifecycle event. */
 export interface OnPlayerAdded {
+	/**
+	 * Called when a player enters the game. Call might be delayed if flamework's
+	 * server-side isn't ignited yet.
+	 *
+	 * @param {Player} player
+	 */
 	onPlayerAdded(player: Player): void
 }
 
-// Fires when player leaves or game closes
+/** Hook into the OnPlayerRemoving lifecycle event. */
 export interface OnPlayerRemoving {
+	/**
+	 * Called when a player is about to leave the game. This can happen from
+	 * either game.BindToClose() or Players.PlayerRemoving.
+	 *
+	 * @param {Player} player
+	 */
 	onPlayerRemoving(player: Player): void
 }
 
 @Service({})
 export class PlayerService implements OnInit, OnStart {
-	public playerCount = atom(0)
-
 	onInit() {
 		this.setupOnAdded()
 		this.setupOnRemoving()
 		this.setupCharacterFolder()
 	}
 
-	onStart() {
-		Players.PlayerAdded.Connect(() => this.updatePlayerCount())
-		Players.PlayerRemoving.Connect(() => this.updatePlayerCount())
-	}
-
-	private updatePlayerCount() {
-		this.playerCount(Players.GetPlayers().size())
-	}
+	onStart() {}
 
 	private setupCharacterFolder() {
 		Players.PlayerAdded.Connect(player => {
@@ -67,10 +68,6 @@ export class PlayerService implements OnInit, OnStart {
 
 		Players.PlayerRemoving.Connect(player => {
 			listeners.forEach(l => task.spawn(() => l.onPlayerRemoving(player)))
-			// Promise.all this
-			//.andThen(() => {
-			// promise.all(			// })
-			// same for bindtoclose
 		})
 
 		game.BindToClose(() => {

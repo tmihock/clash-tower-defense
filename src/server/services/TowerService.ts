@@ -34,6 +34,7 @@ export class TowerService implements OnStart {
 		if (this.canPlace(player, pos, tower)) {
 			const towerPrice = TowerConfig[tower].price
 			this.playerStateProvider.get(player).money(old => old - towerPrice)
+			this.inventoryService.removeTower(player, tower)
 			this.spawnTower(pos, tower, player)
 			return true
 		} else {
@@ -114,7 +115,7 @@ export class TowerService implements OnStart {
 
 	public spawnTower(pos: Vector3, tower: TowerName, owner: Player) {
 		const id = nextId()
-		const newTower = new Tower_S(tower, id, pos, this.enemyService, owner)
+		const newTower = new Tower_S(tower, id, pos, this.enemyService, owner, this.playerStateProvider)
 
 		Events.towerPlaced.broadcast(id, pos, tower, owner)
 

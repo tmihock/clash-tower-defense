@@ -6,6 +6,8 @@ import { clock } from "shared/types"
 import { Enemy_S } from "./Enemy_S"
 import { Events } from "server/networking"
 import { TargetMode } from "shared/networking"
+import { PlayerStateProvider } from "server/services/PlayerStateProvider"
+import { SharedClock } from "shared/util/SharedClock"
 
 export class Tower_S {
 	public targetMode: TargetMode = "First"
@@ -20,7 +22,8 @@ export class Tower_S {
 		public id: number,
 		public position: Vector3,
 		private enemyService: EnemyService,
-		public owner: Player
+		public owner: Player,
+		private playerStateProvider: PlayerStateProvider
 	) {
 		this.info = TowerConfig[towerName]
 		this.startAttacking()
@@ -40,20 +43,25 @@ export class Tower_S {
 				// Found an enemy within range
 				if (targetEnemy) {
 					// Attack Cooldown
-					const elapsed = os.clock() - this.lastAttack
+					const elapsed = SharedClock() - this.lastAttack
 					if (elapsed >= this.info.attackRate) {
-						this.dealDamage(targetEnemy)
+						this.attackEnemy(targetEnemy)
 					}
 				}
 			})
 		)
 	}
 
-	public dealDamage(enemy: Enemy_S) {
-		this.lastAttack = os.clock()
+	public attackEnemy(enemy: Enemy_S) {
+		this.lastAttack = SharedClock()
+		// animation.Play()
+		// task.wait(animation.Length/2) // Change to be on swing finish
 		enemy.takeDamage(this.info.damage)
 		Events.towerAttackedEnemy.broadcast(this.id, enemy.id)
 		this.damageDealt += this.info.damage
+
+		this.playerStateProvider.get(this.owner).money(old => old + this.info.damage * 1)
+		this.playerStateProvider.get(this.owner).exp(old => old + 1)
 	}
 
 	private findEnemy(targetMode: TargetMode, enemies: Map<number, Enemy_S>): Enemy_S | undefined {
@@ -90,8 +98,8 @@ export class Tower_S {
 
 			// Pick the enemy with maximum progress (furthest along path)
 			return enemiesInRange.reduce((best, enemy) => {
-				const enemyProgress = os.clock() - enemy.timeSpawned
-				const bestProgress = os.clock() - best.timeSpawned
+				const enemyProgress = SharedClock() - enemy.timeSpawned
+				const bestProgress = SharedClock() - best.timeSpawned
 
 				if (targetMode === "First") {
 					return enemyProgress > bestProgress ? enemy : best
@@ -103,6 +111,7 @@ export class Tower_S {
 		}
 	}
 
+	/** Should only be called by TowerService */
 	destroy() {
 		this.maid.DoCleaning()
 	}

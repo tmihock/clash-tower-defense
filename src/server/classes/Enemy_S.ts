@@ -1,17 +1,15 @@
 import { EnemyConfig, EnemyInfo, EnemyName } from "shared/config/EnemyConfig"
-import { ReplicatedStorage } from "@rbxts/services"
 import Signal from "@rbxts/lemon-signal"
 import { Events } from "server/networking"
 import { Dependency } from "@flamework/core"
 import { EnemyService } from "server/services/EnemyService"
-
-const enemyFolder = ReplicatedStorage.Assets.Enemies
+import { SharedClock } from "shared/util/SharedClock"
 
 export class Enemy_S {
 	private health: number
 
 	public info: EnemyInfo
-	public timeSpawned = os.clock()
+	public timeSpawned = SharedClock()
 	public position: Vector3 = Vector3.zero
 	public destroying = new Signal()
 
@@ -39,10 +37,5 @@ export class Enemy_S {
 
 	public getHealth(): number {
 		return this.health
-	}
-
-	public kill() {
-		this.health = 0
-		this.destroying.Fire()
 	}
 }

@@ -29,8 +29,8 @@
       </Item>
       <Item class="Configuration" referent="3">
         <Properties>
-          <string name="Name">tower</string>
-          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD7fiAD7g398+gtK9PggAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIRAAAAZW1vamk6cG9zdC1vZmZpY2UHAAAAVmlzaWJsZQMB</BinaryString>
+          <string name="Name">track</string>
+          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD56dHT/Suxg+ayqYPggAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIPAAAAZW1vamk6d29ybGQtbWFwBwAAAFZpc2libGUDAQ==</BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
           <int64 name="SourceAssetId">-1</int64>
@@ -39,8 +39,8 @@
       </Item>
       <Item class="Configuration" referent="4">
         <Properties>
-          <string name="Name">track</string>
-          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD56dHT/Suxg+ayqYPggAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIPAAAAZW1vamk6d29ybGQtbWFwBwAAAFZpc2libGUDAQ==</BinaryString>
+          <string name="Name">tower</string>
+          <BinaryString name="AttributesSerialize">BgAAAAsAAABBbHdheXNPblRvcAMABQAAAENvbG9yD7fiAD7g398+gtK9PggAAABEcmF3VHlwZQIDAAAAQm94BQAAAEdyb3VwAgAAAAAEAAAASWNvbgIRAAAAZW1vamk6cG9zdC1vZmZpY2UHAAAAVmlzaWJsZQMB</BinaryString>
           <SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
           <bool name="DefinesCapabilities">false</bool>
           <int64 name="SourceAssetId">-1</int64>
